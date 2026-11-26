@@ -1,0 +1,169 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.50.1'
+
+jobs:
+  validate:
+    name: Validate and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    name: Build Android
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build APK
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            flutter build apk --release
+            cp build/app/outputs/flutter-apk/app-release.apk olivos-companion-android-release.apk
+          else
+            flutter build apk --debug
+            cp build/app/outputs/flutter-apk/app-debug.apk olivos-companion-android-debug.apk
+          fi
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android
+          path: olivos-companion-android-*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Build Windows
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: NuGet/setup-nuget@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Package artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist -Recurse
+          Compress-Archive -Path dist\* -DestinationPath olivos-companion-windows.zip
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows
+          path: olivos-companion-windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: Build macOS
+    needs: validate
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build macos --release
+      - name: Package artifact
+        shell: bash
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --sequesterRsrc --keepParent *.app "$GITHUB_WORKSPACE/olivos-companion-macos.zip"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: macos
+          path: olivos-companion-macos.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: Build iOS (unsigned)
+    needs: validate
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+      - name: Package artifact
+        shell: bash
+        run: |
+          cd build/ios/iphoneos
+          ditto -c -k --sequesterRsrc --keepParent *.app "$GITHUB_WORKSPACE/olivos-companion-ios.zip"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ios
+          path: olivos-companion-ios.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  release-draft:
+    name: Release draft
+    if: github.ref_type == 'tag'
+    needs: [android, windows, macos, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: release-artifacts
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: OlivOS Companion ${{ github.ref_name }}
+          draft: true
+          allowUpdates: true
+          removeArtifacts: true
+          artifacts: release-artifacts/**/*

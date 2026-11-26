@@ -1,22 +1,38 @@
 # CI 与构建
 
-正式构建统一由 GitHub Actions 完成。本地只跑 `dart format`、`flutter analyze`、`flutter test`，避免本地平台构建和系统盘占用。
+正式构建由单个 GitHub Actions 工作流 `.github/workflows/build.yml` 完成（对齐 OlivOS 的 Build 结构）。本地只跑 `dart format`、`flutter analyze`、`flutter test`，避免本地平台构建和系统盘占用。
 
 ## 工作流
 
-| 工作流 | 触发 | Runner | 产物 |
-| --- | --- | --- | --- |
-| `ci.yml` | push main、PR、手动 | ubuntu-latest | format/analyze/test 结果 |
-| `build-android.yml` | push main、tag `v*`、手动 | ubuntu-latest | debug APK（main）/ release APK（tag） |
-| `build-windows.yml` | push main、tag `v*`、手动 | windows-latest | Windows Release 目录打包 zip |
+`Build` 工作流包含：
 
-macOS/iOS 工作流在后续里程碑接入（macOS runner），首期 iOS 构建使用 `--no-codesign`。
+| Job | Runner | 内容 |
+| --- | --- | --- |
+| `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test` |
+| `android` | ubuntu-latest | debug APK（非 tag）/ release APK（tag） |
+| `windows` | windows-latest | Windows Release 目录打包 |
+| `macos` | macos-latest | macOS Release `.app` 打包 |
+| `ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
+| `release-draft` | ubuntu-latest | tag 触发，汇总四平台 artifacts 创建 GitHub Release 草稿 |
 
-## 触发与成本
+四平台构建都依赖 `validate` 通过；`release-draft` 依赖四平台构建全部成功。
 
-- PR 与 main 只跑轻量检查和 Android/Windows 构建。
-- macOS/iOS runner 计费约为 Linux 的 10 倍，后续只在 main/tag/手动触发。
-- 同一分支的构建使用 concurrency 自动取消旧任务。
+## 触发
+
+- push `main`
+- push tag `v*`
+- pull request
+- 手动 `workflow_dispatch`
+
+同一 ref 的旧运行会被 concurrency 自动取消。
+
+## 产物
+
+- Android：`olivos-companion-android-debug.apk`（非 tag）或 `olivos-companion-android-release.apk`（tag）
+- Windows：`olivos-companion-windows.zip`
+- macOS：`olivos-companion-macos.zip`
+- iOS：`olivos-companion-ios.zip`（未签名）
+- tag：以上产物全部附加到 GitHub Release 草稿
 
 ## 下载产物
 
@@ -43,8 +59,8 @@ gh run view <run-id> --log-failed
 
 - Android：debug 或 unsigned release。
 - Windows：未签名 zip；后续接代码签名。
-- macOS：ad-hoc 或未签名 dmg。
-- iOS：`flutter build ios --no-codesign`，只出未签名包/模拟器包。
+- macOS：ad-hoc 或未签名 zip。
+- iOS：`--no-codesign`，只出未签名包。
 
 正式签名材料放 GitHub Secrets，绝不入库：
 
