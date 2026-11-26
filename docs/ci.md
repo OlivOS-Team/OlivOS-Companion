@@ -9,13 +9,13 @@
 | Job | Runner | 内容 |
 | --- | --- | --- |
 | `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
-| `android` | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
-| `windows` | windows-latest | Windows Release 便携目录 + Inno Setup 安装包，分两个 artifact 上传 |
-| `macos` | macos-latest | macOS Release `.app` 打包 |
-| `ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
+| `build-android` | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
+| `build-windows` | windows-latest | Windows Release 便携目录 + Inno Setup 安装包，分两个 artifact 上传 |
+| `build-macos` | macos-latest | macOS Release `.app` 打包 |
+| `build-ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
 | `release-draft` | ubuntu-latest | tag 触发，仅汇总发布文件并创建 GitHub Release 草稿 |
 
-四平台构建都依赖 `validate` 通过；`release-draft` 依赖四平台构建全部成功。
+四个平台构建都依赖 `validate` 通过，彼此独立并行执行；`release-draft` 依赖 `validate` 和四平台构建全部成功。
 
 ## 触发
 
