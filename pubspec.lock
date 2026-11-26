@@ -130,8 +130,8 @@ packages:
     dependency: "direct main"
     description:
       path: flutter_inappwebview
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "6.2.0-beta.3"
@@ -139,8 +139,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_android
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.2.0-beta.3"
@@ -148,8 +148,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: "dev_packages/flutter_inappwebview_internal_annotations"
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.3.0"
@@ -157,8 +157,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_ios
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.2.0-beta.3"
@@ -166,8 +166,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_linux
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "0.1.0-beta.1"
@@ -175,8 +175,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_macos
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.2.0-beta.3"
@@ -184,8 +184,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_platform_interface
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.4.0-beta.3"
@@ -193,8 +193,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_web
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "1.2.0-beta.3"
@@ -202,8 +202,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: flutter_inappwebview_windows
-      ref: "839a9858a418ba284019d521cea82eacd1968a77"
-      resolved-ref: "839a9858a418ba284019d521cea82eacd1968a77"
+      ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
+      resolved-ref: b5b02d30f9edfda4bb77ba215bcff05dec1b3c73
       url: "https://github.com/OlivOS-Team/flutter_inappwebview.git"
     source: git
     version: "0.7.0-beta.3"

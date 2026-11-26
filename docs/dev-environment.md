@@ -117,11 +117,18 @@ flutter run -d android
 ## Windows WebView 插件补丁
 
 - 使用 OlivOS-Team 维护的 fork：<https://github.com/OlivOS-Team/flutter_inappwebview>。
-- 维护分支：`olivos/windows-focus-fix`；项目通过 commit `839a9858a418ba284019d521cea82eacd1968a77` 固定依赖。
+- 维护分支：`olivos/main`；项目通过 commit `b5b02d30f9edfda4bb77ba215bcff05dec1b3c73` 固定依赖。该 commit 是 `olivos/main` 的祖先，包含全部代码补丁；后续仅文档提交不影响依赖。
 - 补丁把 `CustomPlatformView` 窗口从 style `0` 改为 `WS_CHILD | WS_CLIPSIBLINGS`。原实现创建的是 owned top-level window，点击 WebView 时会激活它自己，导致 Flutter runner 失活、标题栏变色并影响焦点行为。
+- 纹理桥只在捕获到新 WebView 帧或尺寸变化时复制并 `Flush`，避免在高刷新率屏幕上每显示帧重复复制同一张纹理。
 - `pubspec.yaml` 的 `flutter_inappwebview` 以及全部 `flutter_inappwebview_*` 平台实现都指向该 fork；不再使用本地 `third_party` 副本，也不再混用 pub.dev 上的平台包。
 - 补丁说明、上游状态和移除条件见 fork 根目录的 `OLIVOS_PATCH.md`。
 - 上游修复并发布后，切回 pub.dev 版本并删除 `dependency_overrides`。
+
+## Windows 帧率说明
+
+- 评估帧率请使用 `flutter build windows --profile` 或 Release 构建；Debug 模式有 JIT、断言和调试开销，不适合作为帧率基准。
+- Flutter Windows 的高刷新率支持存在引擎级限制，可参考 [flutter/flutter#93058](https://github.com/flutter/flutter/issues/93058) 和 [flutter/flutter#175135](https://github.com/flutter/flutter/issues/175135)。如果应用逻辑与 WebView 纹理都已优化后仍固定在 60–70 FPS，优先按引擎问题排查。
+- WebView 内容目前经过 Windows Graphics Capture 纹理桥。若必须进一步降低延迟/提高帧率，需要改为原生子窗口 WebView，但会失去 Flutter 覆盖层能力。
 
 ## 应用图标
 

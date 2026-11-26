@@ -44,13 +44,19 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   String? _authError;
   String? _loadError;
   bool _preparing = true;
-  double _progress = 0;
+  final ValueNotifier<double> _progress = ValueNotifier<double>(0);
   bool _logoutHandled = false;
 
   @override
   void initState() {
     super.initState();
     _prepare();
+  }
+
+  @override
+  void dispose() {
+    _progress.dispose();
+    super.dispose();
   }
 
   Future<void> _prepare() async {
@@ -205,19 +211,21 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                                   );
                                 },
                                 onLoadStart: (controller, url) {
-                                  setState(() => _loadError = null);
+                                  if (_loadError != null) {
+                                    setState(() => _loadError = null);
+                                  }
                                 },
                                 onLoadStop: (controller, url) {
-                                  setState(() {
-                                    _progress = 1;
-                                    _loadError = null;
-                                  });
+                                  _progress.value = 1;
+                                  if (_loadError != null) {
+                                    setState(() => _loadError = null);
+                                  }
                                   controller.evaluateJavascript(
                                     source: _webUiLogoutBridge,
                                   );
                                 },
                                 onProgressChanged: (controller, progress) {
-                                  setState(() => _progress = progress / 100);
+                                  _progress.value = progress / 100;
                                 },
                                 onReceivedError: (controller, request, error) {
                                   if (request.isForMainFrame ?? false) {
@@ -230,17 +238,25 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                                 shouldOverrideUrlLoading: _handleNavigation,
                                 onCreateWindow: _handleCreateWindow,
                               ),
-                              if (_progress > 0 && _progress < 1)
-                                Positioned(
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: LinearProgressIndicator(
-                                    value: _progress,
-                                    minHeight: 2,
-                                    backgroundColor: colorScheme.outlineVariant,
-                                  ),
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: ValueListenableBuilder<double>(
+                                  valueListenable: _progress,
+                                  builder: (context, progress, _) {
+                                    if (progress <= 0 || progress >= 1) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return LinearProgressIndicator(
+                                      value: progress,
+                                      minHeight: 2,
+                                      backgroundColor:
+                                          colorScheme.outlineVariant,
+                                    );
+                                  },
                                 ),
+                              ),
                             ],
                           ),
                         ),
