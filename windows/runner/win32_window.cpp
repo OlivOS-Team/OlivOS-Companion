@@ -29,6 +29,12 @@ namespace {
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
+// Minimum window size in logical pixels. The WebUI needs enough room for its
+// sidebar and content; preventing an arbitrarily small window also avoids
+// unusable layouts.
+constexpr int kMinWindowWidth = 960;
+constexpr int kMinWindowHeight = 600;
+
 /// Registry key for app theme preference.
 ///
 /// A value of 0 indicates apps should use dark mode. A non-zero or missing
@@ -197,6 +203,18 @@ Win32Window::MessageHandler(HWND hwnd,
         PostQuitMessage(0);
       }
       return 0;
+
+    case WM_GETMINMAXINFO: {
+      auto* min_max_info = reinterpret_cast<MINMAXINFO*>(lparam);
+      if (min_max_info != nullptr) {
+        const UINT dpi = GetDpiForWindow(hwnd);
+        const double scale_factor = dpi > 0 ? dpi / 96.0 : 1.0;
+        min_max_info->ptMinTrackSize.x = Scale(kMinWindowWidth, scale_factor);
+        min_max_info->ptMinTrackSize.y = Scale(kMinWindowHeight, scale_factor);
+        return 0;
+      }
+      break;
+    }
 
     case WM_DPICHANGED: {
       auto newRectSize = reinterpret_cast<RECT*>(lparam);

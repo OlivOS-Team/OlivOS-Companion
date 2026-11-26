@@ -7,6 +7,8 @@ class MainFlutterWindow: NSWindow {
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
+    // Keep the WebUI sidebar and content usable on desktop.
+    self.minSize = NSSize(width: 960, height: 600)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
