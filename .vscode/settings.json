@@ -1,3 +1,4 @@
 {
-  "dart.flutterSdkPath": "${env:FLUTTER_HOME}"
+  "dart.flutterSdkPath": "${env:FLUTTER_HOME}",
+  "dart.flutterHotReloadOnSave": "allIfDirty"
 }

@@ -1,5 +1,5 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/url_utils.dart';
 import '../../models/instance_profile.dart';
@@ -13,33 +13,51 @@ class InstanceListPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final instances = ref.watch(instancesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('OlivOS Companion')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('添加实例'),
+      appBar: AppBar(
+        leadingWidth: 72,
+        titleSpacing: 12,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 24, top: 12, bottom: 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/branding/olivos.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'OlivOS Companion',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              '多实例 WebUI 客户端',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(fontSize: 12),
+            ),
+          ],
+        ),
       ),
       body: instances.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('读取实例失败：$error')),
-        data: (items) {
-          if (items.isEmpty) {
-            return _EmptyState(onAdd: () => _showAddDialog(context));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final profile = items[index];
-              return _InstanceCard(
-                profile: profile,
-                onOpen: () => _openInstance(context, profile),
-                onDelete: () => _confirmDelete(context, ref, profile),
-              );
-            },
-          );
-        },
+        error: (error, _) => _PageMessage(message: '读取实例失败：$error'),
+        data: (items) => _InstanceListBody(
+          items: items,
+          onAdd: () => _showAddDialog(context),
+          onOpen: (profile) => _openInstance(context, profile),
+          onDelete: (profile) => _confirmDelete(context, ref, profile),
+        ),
       ),
     );
   }
@@ -62,6 +80,7 @@ class InstanceListPage extends ConsumerWidget {
     WidgetRef ref,
     InstanceProfile profile,
   ) async {
+    final scheme = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -73,6 +92,11 @@ class InstanceListPage extends ConsumerWidget {
             child: const Text('取消'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.errorContainer,
+              foregroundColor: scheme.error,
+              side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('删除'),
           ),
@@ -85,6 +109,94 @@ class InstanceListPage extends ConsumerWidget {
   }
 }
 
+class _InstanceListBody extends StatelessWidget {
+  const _InstanceListBody({
+    required this.items,
+    required this.onAdd,
+    required this.onOpen,
+    required this.onDelete,
+  });
+
+  final List<InstanceProfile> items;
+  final VoidCallback onAdd;
+  final ValueChanged<InstanceProfile> onOpen;
+  final ValueChanged<InstanceProfile> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SectionHeader(count: items.length, onAdd: onAdd),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: items.isEmpty
+                      ? _EmptyState(onAdd: onAdd)
+                      : ListView.separated(
+                          padding: EdgeInsets.zero,
+                          itemCount: items.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final profile = items[index];
+                            return _InstanceCard(
+                              profile: profile,
+                              onOpen: () => onOpen(profile),
+                              onDelete: () => onDelete(profile),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.count, required this.onAdd});
+
+  final int count;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('实例', style: textTheme.titleMedium),
+              const SizedBox(height: 2),
+              Text(
+                count == 0 ? '尚未添加实例' : '$count 个实例',
+                style: textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('添加实例'),
+        ),
+      ],
+    );
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.onAdd});
 
@@ -92,35 +204,46 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.dns_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/branding/olivos.png',
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '还没有 OlivOS 实例',
+                  style: textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '添加一个 WebUI 地址，之后可以在这里快速切换多个实例。',
+                  style: textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('添加实例'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              '还没有 OlivOS 实例',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '添加一个 WebUI 地址，之后可以在这里快速切换多个实例。',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('添加实例'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -140,25 +263,123 @@ class _InstanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: ListTile(
+      child: InkWell(
         onTap: onOpen,
-        leading: CircleAvatar(
-          backgroundColor: colorScheme.primaryContainer,
-          foregroundColor: colorScheme.onPrimaryContainer,
-          child: const Icon(Icons.public),
+        hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.public, color: scheme.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      profile.baseUrl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (profile.autoLogin) ...[
+                      const SizedBox(height: 6),
+                      _Tag(label: '自动登录'),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: scheme.error,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('删除', style: TextStyle(color: scheme.error)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        title: Text(profile.name),
-        subtitle: Text(profile.baseUrl),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'delete') onDelete();
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 'delete', child: Text('删除')),
-          ],
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: scheme.primary, fontSize: 11),
+      ),
+    );
+  }
+}
+
+class _PageMessage extends StatelessWidget {
+  const _PageMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       ),
     );
@@ -230,14 +451,22 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return AlertDialog(
       title: const Text('添加实例'),
       content: SizedBox(
-        width: 420,
+        width: 480,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                '添加一个 OlivOS WebUI 实例；自动登录会把密码保存到系统安全存储。',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -278,14 +507,20 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.error_outline, size: 16, color: scheme.error),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.error,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ],

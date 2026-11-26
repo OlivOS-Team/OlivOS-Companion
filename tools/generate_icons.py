@@ -26,6 +26,7 @@ ANDROID_ICONS = {
 }
 
 WINDOWS_ICON = ROOT / "windows" / "runner" / "resources" / "app_icon.ico"
+BRANDING_ICON = ROOT / "assets" / "branding" / "olivos.png"
 WINDOWS_SIZES = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 
 
@@ -100,6 +101,11 @@ def main() -> None:
 
     source = load_source()
     print(f"source   {SOURCE.relative_to(ROOT)}  {source.width}x{source.height}  {source.mode}")
+
+    BRANDING_ICON.parent.mkdir(parents=True, exist_ok=True)
+    resized(source, 256).save(BRANDING_ICON, optimize=True)
+    print(f"branding {BRANDING_ICON.relative_to(ROOT)}  256x256")
+
     generate_android(source)
     generate_from_contents(
         source,

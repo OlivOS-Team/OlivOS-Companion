@@ -92,7 +92,8 @@ flutter run -d android
   - `OlivOS Companion (Windows)`：F5 默认，`deviceId=windows`
   - `OlivOS Companion (当前设备)`：使用 VS Code 状态栏选中的设备
   - `OlivOS Companion (macOS)`：`deviceId=macos`
-- `.vscode/settings.json`：`dart.flutterSdkPath = ${env:FLUTTER_HOME}`
+- `.vscode/settings.json`：`dart.flutterSdkPath = ${env:FLUTTER_HOME}`，并启用 `dart.flutterHotReloadOnSave = allIfDirty`（保存有改动的文件时自动热重载）。
+- 热重载只影响 Dart/Flutter UI；修改原生插件、`pubspec`、平台工程或应用入口初始化逻辑时，需要 Hot Restart、重新构建或重启调试会话。Visual Studio 的原生 F5 不提供 Dart 热重载。
 - `.vscode/extensions.json`：推荐 `Dart-Code.flutter` 与 `Dart-Code.dart-code`
 - Visual Studio 原生开发（Windows runner / 插件 C++ 调试）见 `docs/visual-studio.md`。
 - 需要安装 Dart/Flutter 扩展。

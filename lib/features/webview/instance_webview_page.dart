@@ -53,7 +53,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
         } on AuthException catch (error) {
           authError = error.message;
         } catch (error) {
-          authError = '自动登录失败：$error';
+          authError = '$error';
         }
       }
     }
@@ -106,6 +106,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   }
 
   Future<void> _clearSession() async {
+    final scheme = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -117,6 +118,11 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
             child: const Text('取消'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.errorContainer,
+              foregroundColor: scheme.error,
+              side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('清除'),
           ),
@@ -145,10 +151,31 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.profile.name),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.profile.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              widget.profile.baseUrl,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: '刷新',
@@ -157,9 +184,27 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
           ),
           PopupMenuButton<String>(
             onSelected: _onMenuSelected,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'browser', child: Text('在浏览器打开')),
-              PopupMenuItem(value: 'clear', child: Text('清除会话')),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'browser',
+                child: Row(
+                  children: [
+                    Icon(Icons.open_in_browser, size: 18),
+                    SizedBox(width: 8),
+                    Text('在浏览器打开'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('清除会话', style: TextStyle(color: colorScheme.error)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -169,16 +214,20 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
           : Column(
               children: [
                 if (_authError != null)
-                  _Banner(
+                  _Notice(
                     message: '自动登录失败：$_authError。已回退到 WebUI 登录页。',
+                    icon: Icons.error_outline,
                     background: colorScheme.errorContainer,
+                    border: colorScheme.error.withValues(alpha: 0.35),
                     foreground: colorScheme.onErrorContainer,
                   ),
                 if (_loadError != null)
-                  _Banner(
+                  _Notice(
                     message: _loadError!,
-                    background: colorScheme.secondaryContainer,
-                    foreground: colorScheme.onSecondaryContainer,
+                    icon: Icons.info_outline,
+                    background: colorScheme.surfaceContainerHighest,
+                    border: colorScheme.outline,
+                    foreground: colorScheme.onSurface,
                   ),
                 Expanded(
                   child: Stack(
@@ -226,7 +275,16 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                         onCreateWindow: _handleCreateWindow,
                       ),
                       if (_progress > 0 && _progress < 1)
-                        LinearProgressIndicator(value: _progress),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(
+                            value: _progress,
+                            minHeight: 2,
+                            backgroundColor: colorScheme.outlineVariant,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -236,24 +294,45 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   }
 }
 
-class _Banner extends StatelessWidget {
-  const _Banner({
+class _Notice extends StatelessWidget {
+  const _Notice({
     required this.message,
+    required this.icon,
     required this.background,
+    required this.border,
     required this.foreground,
   });
 
   final String message;
+  final IconData icon;
   final Color background;
+  final Color border;
   final Color foreground;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      color: background,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Text(message, style: TextStyle(color: foreground)),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: background,
+        border: Border.all(color: border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: foreground),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -90,7 +90,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.olivosteam" "\0"
-            VALUE "FileDescription", "olivos_companion" "\0"
+            VALUE "FileDescription", "OlivOS Companion" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "olivos_companion" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.olivosteam. All rights reserved." "\0"
