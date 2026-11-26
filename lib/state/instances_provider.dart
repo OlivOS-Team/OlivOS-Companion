@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/config_transfer.dart';
 import '../data/instance_store.dart';
 import '../models/instance_profile.dart';
 
@@ -37,6 +38,46 @@ class InstancesNotifier extends AsyncNotifier<List<InstanceProfile>> {
       await store.savePassword(profile.id, password);
     }
     state = AsyncData(updated);
+  }
+
+  Future<int> importConfig(List<InstanceConfigEntry> entries) async {
+    final store = ref.read(instanceStoreProvider);
+    final current = state.value ?? await store.loadProfiles();
+    final updated = [...current];
+
+    for (final entry in entries) {
+      final index = updated.indexWhere(
+        (profile) => profile.baseUrl == entry.baseUrl,
+      );
+      if (index >= 0) {
+        final existing = updated[index];
+        updated[index] = existing.copyWith(
+          name: entry.name,
+          autoLogin: entry.autoLogin,
+        );
+        if (!entry.autoLogin) {
+          await store.deletePassword(existing.id);
+        } else if (entry.password != null) {
+          await store.savePassword(existing.id, entry.password!);
+        }
+        continue;
+      }
+
+      final profile = InstanceProfile(
+        id: const Uuid().v4(),
+        name: entry.name,
+        baseUrl: entry.baseUrl,
+        autoLogin: entry.autoLogin,
+      );
+      updated.add(profile);
+      if (entry.autoLogin && entry.password != null) {
+        await store.savePassword(profile.id, entry.password!);
+      }
+    }
+
+    await store.saveProfiles(updated);
+    state = AsyncData(updated);
+    return entries.length;
   }
 
   Future<void> removeProfile(String id) async {

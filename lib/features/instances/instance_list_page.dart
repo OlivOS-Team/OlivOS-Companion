@@ -1,7 +1,9 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/url_utils.dart';
+import '../../data/config_transfer.dart';
 import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
 import '../webview/instance_webview_page.dart';
@@ -48,6 +50,36 @@ class InstanceListPage extends ConsumerWidget {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'import') _importFromClipboard(context, ref);
+              if (value == 'export-all') _exportAll(context, ref);
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    const Icon(Icons.content_paste_go, size: 18),
+                    const SizedBox(width: 8),
+                    const Text('从剪贴板导入'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export-all',
+                child: Row(
+                  children: [
+                    const Icon(Icons.content_copy, size: 18),
+                    const SizedBox(width: 8),
+                    const Text('导出全部到剪贴板'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: instances.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -56,10 +88,147 @@ class InstanceListPage extends ConsumerWidget {
           items: items,
           onAdd: () => _showAddDialog(context),
           onOpen: (profile) => _openInstance(context, ref, profile),
+          onExport: (profile) => _exportSingle(context, ref, profile),
           onDelete: (profile) => _confirmDelete(context, ref, profile),
         ),
       ),
     );
+  }
+
+  Future<List<InstanceConfigEntry>> _configEntries(
+    WidgetRef ref,
+    List<InstanceProfile> profiles,
+  ) async {
+    final store = ref.read(instanceStoreProvider);
+    final entries = <InstanceConfigEntry>[];
+    for (final profile in profiles) {
+      entries.add(
+        InstanceConfigEntry(
+          name: profile.name,
+          baseUrl: profile.baseUrl,
+          autoLogin: profile.autoLogin,
+          password: await store.readPassword(profile.id),
+        ),
+      );
+    }
+    return entries;
+  }
+
+  Future<void> _copyConfig(
+    BuildContext context,
+    List<InstanceConfigEntry> entries,
+    String message,
+  ) async {
+    try {
+      await Clipboard.setData(
+        ClipboardData(text: ConfigTransfer.encode(entries)),
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$message（Base64 编码，非加密）')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+    }
+  }
+
+  Future<void> _exportAll(BuildContext context, WidgetRef ref) async {
+    final profiles = ref.read(instancesProvider).value ?? const [];
+    if (profiles.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('没有可导出的实例')));
+      return;
+    }
+
+    try {
+      final entries = await _configEntries(ref, profiles);
+      if (!context.mounted) return;
+      await _copyConfig(context, entries, '已导出 ${entries.length} 个实例到剪贴板');
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+    }
+  }
+
+  Future<void> _exportSingle(
+    BuildContext context,
+    WidgetRef ref,
+    InstanceProfile profile,
+  ) async {
+    try {
+      final entries = await _configEntries(ref, [profile]);
+      if (!context.mounted) return;
+      await _copyConfig(context, entries, '已导出「${profile.name}」到剪贴板');
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+    }
+  }
+
+  Future<void> _importFromClipboard(BuildContext context, WidgetRef ref) async {
+    ClipboardData? data;
+    try {
+      data = await Clipboard.getData(Clipboard.kTextPlain);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('读取剪贴板失败：$error')));
+      return;
+    }
+
+    final text = data?.text;
+    if (text == null || text.trim().isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('剪贴板中没有配置内容')));
+      return;
+    }
+
+    List<InstanceConfigEntry> entries;
+    try {
+      entries = ConfigTransfer.decode(text);
+    } on ConfigTransferException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导入失败：${error.message}')));
+      return;
+    }
+
+    if (!context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('从剪贴板导入'),
+        content: Text('将导入 ${entries.length} 个实例；相同地址的实例会被更新，是否继续？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('导入'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final count = await ref
+          .read(instancesProvider.notifier)
+          .importConfig(entries);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('已导入 $count 个实例')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导入失败：$error')));
+    }
   }
 
   Future<void> _showAddDialog(BuildContext context) async {
@@ -119,12 +288,14 @@ class _InstanceListBody extends StatelessWidget {
     required this.items,
     required this.onAdd,
     required this.onOpen,
+    required this.onExport,
     required this.onDelete,
   });
 
   final List<InstanceProfile> items;
   final VoidCallback onAdd;
   final ValueChanged<InstanceProfile> onOpen;
+  final ValueChanged<InstanceProfile> onExport;
   final ValueChanged<InstanceProfile> onDelete;
 
   @override
@@ -154,6 +325,7 @@ class _InstanceListBody extends StatelessWidget {
                             return _InstanceCard(
                               profile: profile,
                               onOpen: () => onOpen(profile),
+                              onExport: () => onExport(profile),
                               onDelete: () => onDelete(profile),
                             );
                           },
@@ -259,11 +431,13 @@ class _InstanceCard extends StatelessWidget {
   const _InstanceCard({
     required this.profile,
     required this.onOpen,
+    required this.onExport,
     required this.onDelete,
   });
 
   final InstanceProfile profile;
   final VoidCallback onOpen;
+  final VoidCallback onExport;
   final VoidCallback onDelete;
 
   @override
@@ -319,9 +493,21 @@ class _InstanceCard extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
+                  if (value == 'export') onExport();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.content_copy, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('导出到剪贴板'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   PopupMenuItem(
                     value: 'delete',
                     child: Row(
