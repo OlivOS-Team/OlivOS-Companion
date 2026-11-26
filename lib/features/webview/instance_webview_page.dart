@@ -43,7 +43,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
 
   InAppWebViewController? _controller;
   WebViewEnvironment? _webViewEnvironment;
-  String? _tokenScript;
+  String? _token;
   String? _authError;
   String? _loadError;
   bool _preparing = true;
@@ -64,7 +64,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
 
   Future<void> _prepare() async {
     String? authError;
-    String? tokenScript;
+    String? token;
 
     unawaited(_cacheVersion());
     final webViewEnvironmentFuture = WebViewEnvironmentService.ensure();
@@ -73,13 +73,9 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
       final password = await _store.readPassword(widget.profile.id);
       if (password != null && password.isNotEmpty) {
         try {
-          final token = await _authService.login(
+          token = await _authService.login(
             baseUrl: widget.profile.baseUrl,
             password: password,
-          );
-          tokenScript = _authService.injectionScript(
-            origin: widget.profile.origin,
-            token: token,
           );
         } on AuthException catch (error) {
           authError = error.message;
@@ -94,7 +90,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
     setState(() {
       _preparing = false;
       _webViewEnvironment = webViewEnvironment;
-      _tokenScript = tokenScript;
+      _token = token;
       _authError = authError;
     });
   }
@@ -169,6 +165,11 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final userScript = _authService.injectionScript(
+      origin: widget.profile.origin,
+      token: _token,
+      darkMode: Theme.of(context).brightness == Brightness.dark,
+    );
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -214,12 +215,11 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                                 ),
                                 initialUserScripts:
                                     UnmodifiableListView<UserScript>([
-                                      if (_tokenScript != null)
-                                        UserScript(
-                                          source: _tokenScript!,
-                                          injectionTime: UserScriptInjectionTime
-                                              .AT_DOCUMENT_START,
-                                        ),
+                                      UserScript(
+                                        source: userScript,
+                                        injectionTime: UserScriptInjectionTime
+                                            .AT_DOCUMENT_START,
+                                      ),
                                     ]),
                                 onWebViewCreated: (controller) {
                                   _controller = controller;

@@ -83,14 +83,24 @@ class AuthService {
   }
 
   /// WebUI 在启动时读取这个 key；只对实例自身的 origin 生效。
-  String injectionScript({required String origin, required String token}) {
+  String injectionScript({
+    required String origin,
+    String? token,
+    bool? darkMode,
+  }) {
     final originLiteral = jsonEncode(origin);
-    final tokenLiteral = jsonEncode(token);
+    final tokenLine = token == null || token.isEmpty
+        ? ''
+        : "localStorage.setItem('olivos.webui.token', ${jsonEncode(token)});";
+    final themeLine = darkMode == null
+        ? ''
+        : "localStorage.setItem('olivos.webui.theme', '${darkMode ? 'dark' : 'light'}');";
     return '''
 (function () {
   try {
     if (location.origin === $originLiteral) {
-      localStorage.setItem('olivos.webui.token', $tokenLiteral);
+      $themeLine
+      $tokenLine
     }
   } catch (_) {}
 })();

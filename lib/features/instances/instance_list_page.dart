@@ -6,6 +6,7 @@ import '../../core/url_utils.dart';
 import '../../data/config_transfer.dart';
 import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
+import '../../state/theme_mode_provider.dart';
 import '../webview/instance_webview_page.dart';
 
 class InstanceListPage extends ConsumerWidget {
@@ -14,6 +15,7 @@ class InstanceListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final instances = ref.watch(instancesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         leadingWidth: 72,
@@ -51,6 +53,15 @@ class InstanceListPage extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
+            onPressed: () => ref
+                .read(themeModeProvider.notifier)
+                .toggle(Theme.of(context).brightness),
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            ),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'import') _importFromClipboard(context, ref);

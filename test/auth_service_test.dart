@@ -88,6 +88,16 @@ void main() {
     expect(version, isNull);
   });
 
+  test('注入脚本会同步 WebUI 主题', () {
+    final script = AuthService().injectionScript(
+      origin: 'http://127.0.0.1:20480',
+      darkMode: true,
+    );
+
+    expect(script, contains('olivos.webui.theme'));
+    expect(script, contains("'dark'"));
+  });
+
   test('注入脚本限定 origin 并写入 token key', () {
     final script = AuthService().injectionScript(
       origin: 'http://127.0.0.1:20480',
