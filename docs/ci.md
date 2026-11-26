@@ -44,6 +44,8 @@
   快捷方式，桌面快捷方式可选，并带卸载程序。
 - 安装时检测 VC++ 运行库，缺失时静默安装；卸载不会删除用户实例和登录信息。
 - 便携版不会安装运行库，目标机器仍需 VC++ 2015-2022 x64 运行库。
+- 安装包使用 AppData/LocalAppData 保存数据；便携包包含 `portable.flag`，数据保存在
+  exe 同目录的 `userdata` 中，WebView2 profile 也跟随该目录。
 - WebView2 Runtime 是运行前置条件：Windows 11 通常已内置，Windows 10 可能需要
   单独安装。
 - 安装包当前未签名，Windows SmartScreen 可能提示；正式分发前接入代码签名。

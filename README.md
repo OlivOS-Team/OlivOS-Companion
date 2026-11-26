@@ -18,3 +18,14 @@ Windows 安装包目前未签名，SmartScreen 可能提示；如介意可自行
 
 - 在 Windows 桌面端按 `F11` 切换无边框全屏，再按一次恢复原窗口状态。
 - 实例打开后会自动读取并缓存 OlivOS 版本，实例卡片显示为 `名称 · 版本号 - 版本名称`。
+
+## 数据位置
+
+- **安装版**：
+  - 实例、版本缓存和登录信息：`%APPDATA%\com.olivosteam\olivos_companion`
+  - WebView2 profile：`%LOCALAPPDATA%\com.olivosteam\olivos_companion\WebView2`
+- **便携版**：
+  - 数据跟随 exe，存放在 exe 同目录的 `userdata` 中
+  - 便携包根目录包含 `portable.flag`，应用据此切换到便携模式
+- 自动登录密码使用 Windows DPAPI 加密，和当前 Windows 用户绑定；把便携目录复制到其他用户或其他电脑后，需要重新输入密码。
+- 升级到新版本时，旧的 `shared_preferences.json` 会自动迁移为 `instances.json`；WebView2 profile 会切换到新位置，首次打开实例可能需要重新登录 WebUI。

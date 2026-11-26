@@ -100,6 +100,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force dist\portable | Out-Null
           Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist\portable -Recurse -Force
+          New-Item -ItemType File -Force dist\portable\portable.flag | Out-Null
           Compress-Archive -Path dist\portable\* -DestinationPath olivos-companion-windows-portable-x64.zip -Force
 
           $rawVersion = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value.Trim()

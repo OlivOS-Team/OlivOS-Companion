@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/auth_service.dart';
 import '../../data/instance_store.dart';
+import '../../data/web_view_environment.dart';
 import '../../models/instance_profile.dart';
 
 /// WebUI 的退出登录是页面内按钮；点击后通知原生页面退出。
@@ -41,6 +42,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   final InstanceStore _store = InstanceStore();
 
   InAppWebViewController? _controller;
+  WebViewEnvironment? _webViewEnvironment;
   String? _tokenScript;
   String? _authError;
   String? _loadError;
@@ -65,6 +67,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
     String? tokenScript;
 
     unawaited(_cacheVersion());
+    final webViewEnvironmentFuture = WebViewEnvironmentService.ensure();
 
     if (widget.profile.autoLogin) {
       final password = await _store.readPassword(widget.profile.id);
@@ -86,9 +89,11 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
       }
     }
 
+    final webViewEnvironment = await webViewEnvironmentFuture;
     if (!mounted) return;
     setState(() {
       _preparing = false;
+      _webViewEnvironment = webViewEnvironment;
       _tokenScript = tokenScript;
       _authError = authError;
     });
@@ -198,6 +203,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                           child: Stack(
                             children: [
                               InAppWebView(
+                                webViewEnvironment: _webViewEnvironment,
                                 initialUrlRequest: URLRequest(
                                   url: WebUri(widget.profile.baseUrl),
                                 ),
