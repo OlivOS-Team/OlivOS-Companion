@@ -157,15 +157,17 @@ jobs:
           if ($file.Length -lt 1MB) { throw 'VC++ redistributable download is incomplete' }
       - run: flutter pub get
       - run: flutter build windows --release
-      - name: Package portable and installer
+      - name: Package Windows portable
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force dist\portable | Out-Null
           Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist\portable -Recurse -Force
           New-Item -ItemType File -Force dist\portable\portable.flag | Out-Null
-          Compress-Archive -Path dist\portable\* -DestinationPath olivos-companion-windows-portable-x64.zip -Force
-
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           $rawVersion = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value.Trim()
           if (-not $rawVersion) { throw 'Could not read version from pubspec.yaml' }
           if ($env:GITHUB_REF_TYPE -eq 'tag') { $rawVersion = $env:GITHUB_REF_NAME.TrimStart('v') }
@@ -183,20 +185,18 @@ jobs:
 
           $installer = 'dist\olivos-companion-windows-setup-x64.exe'
           if (-not (Test-Path $installer)) { throw 'Installer was not created' }
-          Copy-Item -Path $installer -Destination 'olivos-companion-windows-setup-x64.exe' -Force
-
-          $hashes = foreach ($file in @('olivos-companion-windows-portable-x64.zip', $installer)) {
-            $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $(Split-Path -Leaf $file)"
-          }
-          $hashes | Set-Content -Path olivos-companion-windows-SHA256SUMS.txt -Encoding ascii
-      - uses: actions/upload-artifact@v6
+      - name: Upload Windows portable
+        uses: actions/upload-artifact@v6
         with:
-          name: windows
-          path: |
-            olivos-companion-windows-portable-x64.zip
-            olivos-companion-windows-setup-x64.exe
-            olivos-companion-windows-SHA256SUMS.txt
+          name: windows-portable
+          path: dist/portable/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-installer
+          path: dist/olivos-companion-windows-setup-x64.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -267,6 +267,38 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           path: release-artifacts
+      - name: Stage release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+
+          # Coverage is an Actions-only artifact; never let it reach the release.
+          rm -rf release-artifacts/coverage
+          test -f release-artifacts/windows-portable/portable.flag
+          cp release-artifacts/android/olivos-companion-android-release.apk release-assets/
+          cp release-artifacts/macos/olivos-companion-macos.zip release-assets/
+          cp release-artifacts/ios/olivos-companion-ios.zip release-assets/
+          cp release-artifacts/windows-installer/olivos-companion-windows-setup-x64.exe release-assets/
+
+          # The portable artifact stays uncompressed in Actions; create the final
+          # zip only here so the downloaded workflow artifact is not a zip-in-zip.
+          (
+            cd release-artifacts/windows-portable
+            zip -q -r "$GITHUB_WORKSPACE/release-assets/olivos-companion-windows-portable-x64.zip" .
+          )
+
+          # One checksum file per release asset; never bundle coverage reports here.
+          (
+            cd release-assets
+            for file in *; do
+              case "$file" in
+                *.sha256) continue ;;
+              esac
+              sha256sum "$file" > "$file.sha256"
+            done
+          )
+          find release-assets -maxdepth 1 -type f -printf '%f\n' | sort
       - uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
@@ -274,13 +306,12 @@ jobs:
           draft: true
           allowUpdates: true
           removeArtifacts: true
-          artifacts: release-artifacts/**/*
+          artifacts: release-assets/**/*
           body: |
             ## Windows
 
             - 安装版（推荐）：`olivos-companion-windows-setup-x64.exe`
             - 便携版：`olivos-companion-windows-portable-x64.zip`
-            - SHA-256 校验：`olivos-companion-windows-SHA256SUMS.txt`
 
             安装版会安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装
             Microsoft Visual C++ 2015-2022 x64 运行库。首次运行需要系统中的
@@ -288,3 +319,8 @@ jobs:
 
             便携版不会安装运行库，目标机器仍需 Microsoft Visual C++ 2015-2022
             x64 运行库和 WebView2 Runtime。
+
+            ## 校验
+
+            每个发布产物旁都有同名的 `.sha256` 校验文件，不再提供合并的
+            `SHA256SUMS`。覆盖率报告只作为 Actions artifact 保留，不进入 Release。

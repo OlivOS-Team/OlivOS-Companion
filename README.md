@@ -16,7 +16,7 @@ OlivOS 多实例 WebUI 客户端。
   如果提示“与已安装应用签名不同”，需要先卸载旧版一次；启用固定 release 签名后，
   后续版本可以正常覆盖升级。
 
-Windows 安装包目前未签名，SmartScreen 可能提示；如介意可自行校验 Releases 中的 SHA-256 文件。
+Windows 安装包目前未签名，SmartScreen 可能提示；如介意可自行校验 Releases 中每个产物旁的 `.sha256` 文件。
 
 ## 许可证
 

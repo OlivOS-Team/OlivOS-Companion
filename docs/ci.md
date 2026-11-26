@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
 | `android` | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
-| `windows` | windows-latest | Windows Release 便携 zip + Inno Setup 安装包 |
+| `windows` | windows-latest | Windows Release 便携目录 + Inno Setup 安装包，分两个 artifact 上传 |
 | `macos` | macos-latest | macOS Release `.app` 打包 |
 | `ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
-| `release-draft` | ubuntu-latest | tag 触发，汇总四平台 artifacts 创建 GitHub Release 草稿 |
+| `release-draft` | ubuntu-latest | tag 触发，仅汇总发布文件并创建 GitHub Release 草稿 |
 
 四平台构建都依赖 `validate` 通过；`release-draft` 依赖四平台构建全部成功。
 
@@ -26,16 +26,27 @@
 
 同一 ref 的旧运行会被 concurrency 自动取消。
 
-## 产物
+## Actions artifacts
 
-- Android：`olivos-companion-android-release.apk`（配置签名后，包括所有 tag 构建）或 `olivos-companion-android-debug.apk`（未配置签名的非 tag 构建）
-- Windows 便携版：`olivos-companion-windows-portable-x64.zip`
-- Windows 安装版：`olivos-companion-windows-setup-x64.exe`
-- Windows 校验：`olivos-companion-windows-SHA256SUMS.txt`
-- macOS：`olivos-companion-macos.zip`
-- iOS：`olivos-companion-ios.zip`（未签名）
-- 覆盖率：`coverage/lcov.info`、JSON、Markdown 和 HTML 报告（`coverage` artifact）
-- tag：以上产物全部附加到 GitHub Release 草稿
+- `android`：`olivos-companion-android-release.apk`（配置签名后，包括所有 tag 构建）或 `olivos-companion-android-debug.apk`（未配置签名的非 tag 构建）
+- `windows-portable`：未压缩的便携目录，包含 `portable.flag`；Release 阶段才压缩成 zip
+- `windows-installer`：`olivos-companion-windows-setup-x64.exe`
+- `macos`：`olivos-companion-macos.zip`
+- `ios`：`olivos-companion-ios.zip`（未签名）
+- `coverage`：`coverage/lcov.info`、JSON、Markdown 和 HTML 报告；仅用于 Actions，不进入 Release
+
+GitHub Actions 下载 artifact 时仍会由平台统一包一层 zip；便携版本身不再预压缩，因此不会出现“zip 套 zip”。
+
+## Release assets
+
+tag 触发时，`release-draft` 只暂存以下发布文件，覆盖率报告不会作为 Release asset 上传：
+
+- `olivos-companion-android-release.apk`
+- `olivos-companion-windows-portable-x64.zip`（在 Release 阶段由便携目录生成）
+- `olivos-companion-windows-setup-x64.exe`
+- `olivos-companion-macos.zip`
+- `olivos-companion-ios.zip`
+- 每个文件对应的独立 `*.sha256` 校验文件，不再生成合并的 `SHA256SUMS`
 
 ## 测试覆盖率
 
@@ -44,6 +55,7 @@
 - `tools/coverage/coverage_summary.py` 生成 JSON 和 Markdown 覆盖率摘要
 - Markdown 摘要会写入 GitHub Actions 的 Job Summary
 - `coverage` artifact 包含 lcov、JSON、Markdown 和 HTML 报告
+- 覆盖率仅作为 Actions artifact 保留，不会上传到 GitHub Release
 - Flutter 当前的 lcov 报告通常只有行覆盖率，没有分支数据；统计脚本会明确显示这一点
 
 本地生成：
@@ -59,6 +71,9 @@ python3 tools/coverage/coverage_summary.py coverage/lcov.info \
 
 - 由 Inno Setup 6 生成；CI 会自动安装 Inno Setup，并下载 Microsoft Visual C++
   2015-2022 x64 运行库到 `windows/installer/redist/`（该目录不入库）。
+- 便携目录和安装包分别作为 `windows-portable`、`windows-installer` artifact 上传；
+  便携 zip 只在 Release 阶段生成，避免嵌套压缩包。
+- 每个发布产物生成同名的独立 `.sha256` 校验文件，不再生成合并的 `SHA256SUMS`。
 - 启动时提供简体中文 / English 语言选择；中文界面显示 AGPLv3 中英双语参考译文，
   英文界面显示项目根目录的英文 `LICENSE`。
 - 中文参考译文来自开放原子开源基金会「源译识」项目，文件位于
