@@ -107,6 +107,13 @@ flutter run -d android
 - F5 的 Windows debug 构建使用 `DEV_ROOT` 下的 Flutter SDK 与 pub cache；临时目录默认使用系统值，需要时自行设置用户级 `TMP`/`TEMP`。
 - 如果 F5 提示找不到 NuGet，完全退出并重新打开 VS Code，让用户 `PATH` 生效。
 
+## macOS 构建
+
+- `flutter_inappwebview_macos` beta 的 Swift Package 最低声明为 macOS 10.14，但 `AuthenticationServices` 相关 API 需要 10.15+。
+- 因此 macOS 构建临时使用 CocoaPods：工作流设置 `FLUTTER_SWIFT_PACKAGE_MANAGER=false`，由 `macos/Podfile` 的 `post_install` 将 pod 部署目标统一提升到 12.0。
+- 本地 macOS 构建也需要设置 `FLUTTER_SWIFT_PACKAGE_MANAGER=false`，再执行 `flutter build macos`。
+- 插件上游修复后，移除该开关和 Podfile 兼容设置即可恢复 SPM。
+
 ## 应用图标
 
 - 母图：`resource/favoricon.ico`（256×256，OlivOS 图标）。

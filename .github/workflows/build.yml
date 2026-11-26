@@ -101,6 +101,10 @@ jobs:
     needs: validate
     runs-on: macos-latest
     timeout-minutes: 40
+    env:
+      # flutter_inappwebview_macos beta 的 SPM 包声明 macOS 10.14，
+      # 与 AuthenticationServices 的 10.15 要求冲突；临时改走 CocoaPods。
+      FLUTTER_SWIFT_PACKAGE_MANAGER: 'false'
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
