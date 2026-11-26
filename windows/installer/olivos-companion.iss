@@ -42,11 +42,12 @@ ArchitecturesInstallIn64BitMode=x64
 MinVersion=10.0.17763
 CloseApplications=yes
 RestartApplications=no
-LicenseFile=..\..\LICENSE
 SetupLogging=yes
+ShowLanguageDialog=yes
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "..\..\LICENSE"
+Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"; LicenseFile: "license\AGPL-3.0-zh-CN.txt"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

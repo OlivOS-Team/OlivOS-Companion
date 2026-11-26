@@ -59,6 +59,10 @@ python3 tools/coverage/coverage_summary.py coverage/lcov.info \
 
 - 由 Inno Setup 6 生成；CI 会自动安装 Inno Setup，并下载 Microsoft Visual C++
   2015-2022 x64 运行库到 `windows/installer/redist/`（该目录不入库）。
+- 启动时提供简体中文 / English 语言选择；中文界面显示 AGPLv3 中英双语参考译文，
+  英文界面显示项目根目录的英文 `LICENSE`。
+- 中文参考译文来自开放原子开源基金会「源译识」项目，文件位于
+  `windows/installer/license/AGPL-3.0-zh-CN.txt`；译文为非官方参考，以英文原文为准。
 - 默认安装到 `Program Files\OlivOS Companion`，需要管理员权限；创建开始菜单
   快捷方式，桌面快捷方式可选，并带卸载程序。
 - 安装时检测 VC++ 运行库，缺失时静默安装；卸载不会删除用户实例和登录信息。

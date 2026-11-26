@@ -8,11 +8,21 @@ OlivOS 多实例 WebUI 客户端。
 
 - **Windows 安装版（推荐）**：`olivos-companion-windows-setup-x64.exe`
   - 安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装 VC++ 运行库。
+  - 启动时可选择简体中文或 English；两种语言显示对应语言的 AGPLv3 文本。
 - **Windows 便携版**：`olivos-companion-windows-portable-x64.zip`
   - 解压即可运行，不写入安装目录；目标机器仍需 VC++ 2015-2022 x64 和 WebView2 Runtime。
 - Android、macOS、iOS 产物见 Releases 页面。
 
 Windows 安装包目前未签名，SmartScreen 可能提示；如介意可自行校验 Releases 中的 SHA-256 文件。
+
+## 许可证
+
+本项目使用 GNU Affero General Public License v3（AGPL-3.0）。
+
+安装器的中文界面展示的是基于开放原子开源基金会「源译识」项目整理的中英双语参考译文；该译文为非官方译文，不具法律效力，以英文原文为准：
+
+- 参考译文来源：<https://legal.openatom.tech/zones/licenses/article/mJh21bfxVv6>
+- 英文原文：<https://www.gnu.org/licenses/agpl-3.0.en.html>
 
 ## 使用
 
