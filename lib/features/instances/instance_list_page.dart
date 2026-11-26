@@ -271,7 +271,7 @@ class InstanceListPage extends ConsumerWidget {
   }
 }
 
-class _InstanceListBody extends StatelessWidget {
+class _InstanceListBody extends StatefulWidget {
   const _InstanceListBody({
     required this.items,
     required this.onAdd,
@@ -291,47 +291,112 @@ class _InstanceListBody extends StatelessWidget {
   final ValueChanged<InstanceProfile> onDelete;
 
   @override
+  State<_InstanceListBody> createState() => _InstanceListBodyState();
+}
+
+class _InstanceListBodyState extends State<_InstanceListBody> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Widget _contentFrame({required Widget child, required EdgeInsets padding}) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960),
+        child: Padding(padding: padding, child: child),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final fadeColor = Theme.of(context).scaffoldBackgroundColor;
     return SafeArea(
       top: false,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _SectionHeader(
-                  count: items.length,
-                  onAdd: onAdd,
-                  onImport: onImport,
-                  onExportAll: onExportAll,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: items.isEmpty
-                      ? _EmptyState(onAdd: onAdd, onImport: onImport)
-                      : ListView.separated(
-                          padding: EdgeInsets.zero,
-                          itemCount: items.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final profile = items[index];
-                            return _InstanceCard(
-                              profile: profile,
-                              onOpen: () => onOpen(profile),
-                              onExport: () => onExport(profile),
-                              onDelete: () => onDelete(profile),
-                            );
-                          },
-                        ),
-                ),
-              ],
+      child: Column(
+        children: [
+          _contentFrame(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            child: _SectionHeader(
+              count: widget.items.length,
+              onAdd: widget.onAdd,
+              onImport: widget.onImport,
+              onExportAll: widget.onExportAll,
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: widget.items.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: _EmptyState(
+                      onAdd: widget.onAdd,
+                      onImport: widget.onImport,
+                    ),
+                  )
+                : Scrollbar(
+                    controller: _scrollController,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(scrollbars: false),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ListView.separated(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.only(
+                                top: 16,
+                                bottom: 24,
+                              ),
+                              itemCount: widget.items.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final profile = widget.items[index];
+                                return _contentFrame(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: _InstanceCard(
+                                    profile: profile,
+                                    onOpen: () => widget.onOpen(profile),
+                                    onExport: () => widget.onExport(profile),
+                                    onDelete: () => widget.onDelete(profile),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      fadeColor,
+                                      fadeColor.withValues(alpha: 0),
+                                    ],
+                                  ),
+                                ),
+                                child: const SizedBox(height: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
