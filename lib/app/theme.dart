@@ -378,14 +378,12 @@ ThemeData buildOlivOSTheme(Brightness brightness) {
     ),
     dividerTheme: DividerThemeData(color: colors.line, thickness: 1, space: 1),
     popupMenuTheme: PopupMenuThemeData(
-      color: brightness == Brightness.dark
-          ? const Color(0xFF24282E)
-          : colors.panel,
+      color: colors.panel,
       surfaceTintColor: Colors.transparent,
       shadowColor: colors.dialogShadow,
-      elevation: 8,
+      elevation: 6,
       shape: RoundedRectangleBorder(
-        borderRadius: controlRadius,
+        borderRadius: BorderRadius.circular(6),
         side: BorderSide(color: colors.line),
       ),
       textStyle: textTheme.bodyMedium,
@@ -400,10 +398,19 @@ ThemeData buildOlivOSTheme(Brightness brightness) {
     ),
     tooltipTheme: TooltipThemeData(
       decoration: BoxDecoration(
-        color: colors.text,
+        color: colors.panel,
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colors.line),
+        boxShadow: [
+          BoxShadow(
+            color: colors.dialogShadow,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      textStyle: textTheme.labelSmall?.copyWith(color: colors.panel),
+      textStyle: textTheme.labelSmall?.copyWith(color: colors.text),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     ),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colors.brand,
