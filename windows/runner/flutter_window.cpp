@@ -4,6 +4,12 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+namespace {
+
+constexpr int kFullscreenHotkeyId = 1;
+
+}  // namespace
+
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
@@ -40,6 +46,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  SetFullscreenHotkey(false);
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -51,6 +58,22 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == WM_HOTKEY && wparam == kFullscreenHotkeyId) {
+    ToggleBorderlessFullscreen();
+    return 0;
+  }
+
+  // Fallback when RegisterHotKey is unavailable because another process owns
+  // the hotkey.
+  if (message == WM_KEYDOWN && wparam == VK_F11) {
+    ToggleBorderlessFullscreen();
+    return 0;
+  }
+
+  if (message == WM_ACTIVATE) {
+    SetFullscreenHotkey(LOWORD(wparam) != WA_INACTIVE);
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -68,4 +91,68 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+}
+
+void FlutterWindow::SetFullscreenHotkey(bool enabled) {
+  HWND hwnd = GetHandle();
+  if (hwnd == nullptr) return;
+
+  if (enabled) {
+    if (!fullscreen_hotkey_registered_) {
+      fullscreen_hotkey_registered_ =
+          RegisterHotKey(hwnd, kFullscreenHotkeyId, MOD_NOREPEAT, VK_F11) !=
+          FALSE;
+    }
+    return;
+  }
+
+  if (fullscreen_hotkey_registered_) {
+    UnregisterHotKey(hwnd, kFullscreenHotkeyId);
+    fullscreen_hotkey_registered_ = false;
+  }
+}
+
+void FlutterWindow::ToggleBorderlessFullscreen() {
+  HWND hwnd = GetHandle();
+  if (hwnd == nullptr) return;
+
+  if (!is_borderless_fullscreen_) {
+    saved_window_placement_.length = sizeof(saved_window_placement_);
+    if (!GetWindowPlacement(hwnd, &saved_window_placement_)) return;
+
+    HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitor_info{};
+    monitor_info.cbSize = sizeof(monitor_info);
+    if (monitor == nullptr || !GetMonitorInfo(monitor, &monitor_info)) {
+      return;
+    }
+
+    saved_window_style_ = GetWindowLongPtr(hwnd, GWL_STYLE);
+    saved_window_ex_style_ = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    if (IsZoomed(hwnd)) {
+      ShowWindow(hwnd, SW_RESTORE);
+    }
+
+    LONG_PTR style = saved_window_style_;
+    style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX |
+               WS_SYSMENU);
+    style |= WS_POPUP;
+    SetWindowLongPtr(hwnd, GWL_STYLE, style);
+
+    const RECT& monitor_rect = monitor_info.rcMonitor;
+    SetWindowPos(hwnd, HWND_TOP, monitor_rect.left, monitor_rect.top,
+                 monitor_rect.right - monitor_rect.left,
+                 monitor_rect.bottom - monitor_rect.top,
+                 SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+    is_borderless_fullscreen_ = true;
+    return;
+  }
+
+  SetWindowLongPtr(hwnd, GWL_STYLE, saved_window_style_);
+  SetWindowLongPtr(hwnd, GWL_EXSTYLE, saved_window_ex_style_);
+  SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  SetWindowPlacement(hwnd, &saved_window_placement_);
+  is_borderless_fullscreen_ = false;
 }

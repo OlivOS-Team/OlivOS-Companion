@@ -23,11 +23,20 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  void ToggleBorderlessFullscreen();
+  void SetFullscreenHotkey(bool enabled);
+
   // The project to run.
   flutter::DartProject project_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  bool is_borderless_fullscreen_ = false;
+  bool fullscreen_hotkey_registered_ = false;
+  WINDOWPLACEMENT saved_window_placement_{};
+  LONG_PTR saved_window_style_ = 0;
+  LONG_PTR saved_window_ex_style_ = 0;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
