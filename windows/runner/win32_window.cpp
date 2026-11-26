@@ -29,9 +29,9 @@ namespace {
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
-// Minimum window size in logical pixels. Keep a phone-portrait viewport so the
-// WebUI can be laid out in a narrow window on desktop.
-constexpr int kMinWindowWidth = 360;
+// Minimum window size in logical pixels. Keep the narrow desktop viewport
+// usable while still allowing a compact window.
+constexpr int kMinWindowWidth = 480;
 constexpr int kMinWindowHeight = 640;
 
 /// Registry key for app theme preference.
