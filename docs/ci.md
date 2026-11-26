@@ -54,8 +54,8 @@
 # 安装 Inno Setup 6，并把 VC++ 运行库放到 windows\installer\redist\
 # 名称必须是 vc_redist.x64.exe
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
-  /DMyAppVersion=0.1.0 `
-  /DMyAppVersionNumeric=0.1.0 `
+  /DMyAppVersion=0.1.1 `
+  /DMyAppVersionNumeric=0.1.1 `
   windows\installer\olivos-companion.iss
 ```
 
