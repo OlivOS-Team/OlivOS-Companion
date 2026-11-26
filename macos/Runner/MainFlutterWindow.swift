@@ -13,5 +13,11 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+
+    if let version = Bundle.main.object(
+      forInfoDictionaryKey: "CFBundleShortVersionString"
+    ) as? String, !version.isEmpty {
+      self.title = "OlivOS Companion v\(version)"
+    }
   }
 }
