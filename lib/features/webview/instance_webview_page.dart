@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/auth_service.dart';
 import '../../data/instance_store.dart';
 import '../../data/web_view_environment.dart';
 import '../../models/instance_profile.dart';
+import '../../state/theme_mode_provider.dart';
 
 /// WebUI 的退出登录是页面内按钮；点击后通知原生页面退出。
 const _webUiLogoutBridge = r'''
@@ -28,16 +30,40 @@ const _webUiLogoutBridge = r'''
 })();
 ''';
 
-class InstanceWebViewPage extends StatefulWidget {
+/// WebUI 的主题切换按钮会修改 html[data-theme]，观察它并同步回应用。
+const _webUiThemeBridge = r'''
+(function () {
+  if (window.__olivosThemeBound) return;
+  window.__olivosThemeBound = true;
+
+  function reportTheme() {
+    var theme = document.documentElement.dataset.theme;
+    if (theme !== 'light' && theme !== 'dark') return;
+    try {
+      if (window.flutter_inappwebview) {
+        window.flutter_inappwebview.callHandler('olivosThemeChanged', theme);
+      }
+    } catch (_) {}
+  }
+
+  new MutationObserver(reportTheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+})();
+''';
+
+class InstanceWebViewPage extends ConsumerStatefulWidget {
   const InstanceWebViewPage({super.key, required this.profile});
 
   final InstanceProfile profile;
 
   @override
-  State<InstanceWebViewPage> createState() => _InstanceWebViewPageState();
+  ConsumerState<InstanceWebViewPage> createState() =>
+      _InstanceWebViewPageState();
 }
 
-class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
+class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   final AuthService _authService = AuthService();
   final InstanceStore _store = InstanceStore();
 
@@ -154,6 +180,13 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _syncThemeFromWebUi(String theme) async {
+    if (!mounted) return;
+    await ref
+        .read(themeModeProvider.notifier)
+        .setThemeMode(theme == 'dark' ? ThemeMode.dark : ThemeMode.light);
+  }
+
   Future<void> _handleWebUiLogout() async {
     if (_logoutHandled) return;
     _logoutHandled = true;
@@ -230,6 +263,18 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                                       return null;
                                     },
                                   );
+                                  controller.addJavaScriptHandler(
+                                    handlerName: 'olivosThemeChanged',
+                                    callback: (args) {
+                                      final theme = args.isNotEmpty
+                                          ? args.first
+                                          : null;
+                                      if (theme == 'dark' || theme == 'light') {
+                                        _syncThemeFromWebUi(theme as String);
+                                      }
+                                      return null;
+                                    },
+                                  );
                                 },
                                 onLoadStart: (controller, url) {
                                   if (_loadError != null) {
@@ -243,6 +288,9 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
                                   }
                                   controller.evaluateJavascript(
                                     source: _webUiLogoutBridge,
+                                  );
+                                  controller.evaluateJavascript(
+                                    source: _webUiThemeBridge,
                                   );
                                 },
                                 onProgressChanged: (controller, progress) {

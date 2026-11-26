@@ -16,15 +16,19 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() => ref.watch(initialThemeModeProvider);
 
-  Future<void> toggle(Brightness currentBrightness) async {
-    final next = currentBrightness == Brightness.dark
-        ? ThemeMode.light
-        : ThemeMode.dark;
-    state = next;
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (state == mode) return;
+    state = mode;
     try {
-      await ref.read(settingsStoreProvider).saveThemeMode(next);
+      await ref.read(settingsStoreProvider).saveThemeMode(mode);
     } catch (_) {
       // The visual switch should still work if persistence is unavailable.
     }
+  }
+
+  Future<void> toggle(Brightness currentBrightness) {
+    return setThemeMode(
+      currentBrightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark,
+    );
   }
 }
