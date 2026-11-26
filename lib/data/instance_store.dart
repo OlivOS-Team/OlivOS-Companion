@@ -41,6 +41,25 @@ class InstanceStore {
     );
   }
 
+  Future<void> saveVersion({
+    required String id,
+    required String version,
+    String? versionSlogan,
+  }) async {
+    final profiles = await loadProfiles();
+    var changed = false;
+    final updated = profiles.map((profile) {
+      if (profile.id != id ||
+          (profile.version == version &&
+              profile.versionSlogan == versionSlogan)) {
+        return profile;
+      }
+      changed = true;
+      return profile.copyWith(version: version, versionSlogan: versionSlogan);
+    }).toList();
+    if (changed) await saveProfiles(updated);
+  }
+
   Future<void> savePassword(String id, String password) async {
     if (password.isEmpty) return;
     await _secureStorage.write(key: '$_passwordPrefix$id', value: password);

@@ -58,6 +58,36 @@ void main() {
     );
   });
 
+  test('fetchVersion 读取公开的 /api/health 版本信息', () async {
+    final client = MockClient((request) async {
+      expect(request.url.toString(), 'http://127.0.0.1:20480/api/health');
+      return http.Response(
+        jsonEncode({
+          'status': 'OK',
+          'version': '1.0.5(300)',
+          'version_slogan': '妖刀村正',
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final version = await AuthService(client: client)
+        .fetchVersion(baseUrl: 'http://127.0.0.1:20480');
+
+    expect(version?.version, '1.0.5(300)');
+    expect(version?.slogan, '妖刀村正');
+  });
+
+  test('fetchVersion 在接口异常时返回 null', () async {
+    final client = MockClient((request) async => http.Response('', 503));
+
+    final version = await AuthService(client: client)
+        .fetchVersion(baseUrl: 'http://127.0.0.1:20480');
+
+    expect(version, isNull);
+  });
+
   test('注入脚本限定 origin 并写入 token key', () {
     final script = AuthService().injectionScript(
       origin: 'http://127.0.0.1:20480',

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:material_ui/material_ui.dart';
@@ -63,6 +64,8 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
     String? authError;
     String? tokenScript;
 
+    unawaited(_cacheVersion());
+
     if (widget.profile.autoLogin) {
       final password = await _store.readPassword(widget.profile.id);
       if (password != null && password.isNotEmpty) {
@@ -89,6 +92,18 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
       _tokenScript = tokenScript;
       _authError = authError;
     });
+  }
+
+  Future<void> _cacheVersion() async {
+    final version = await _authService.fetchVersion(
+      baseUrl: widget.profile.baseUrl,
+    );
+    if (version == null) return;
+    await _store.saveVersion(
+      id: widget.profile.id,
+      version: version.version,
+      versionSlogan: version.slogan,
+    );
   }
 
   Future<void> _openExternal(Uri uri) async {

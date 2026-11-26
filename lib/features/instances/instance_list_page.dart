@@ -33,14 +33,14 @@ class InstanceListPage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'OlivOS Companion',
+              'OlivOS',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             Text(
-              '多实例 WebUI 客户端',
+              'Witness Union / 见证联合',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall
@@ -55,7 +55,7 @@ class InstanceListPage extends ConsumerWidget {
         data: (items) => _InstanceListBody(
           items: items,
           onAdd: () => _showAddDialog(context),
-          onOpen: (profile) => _openInstance(context, profile),
+          onOpen: (profile) => _openInstance(context, ref, profile),
           onDelete: (profile) => _confirmDelete(context, ref, profile),
         ),
       ),
@@ -69,10 +69,15 @@ class InstanceListPage extends ConsumerWidget {
     );
   }
 
-  void _openInstance(BuildContext context, InstanceProfile profile) {
-    Navigator.of(context).push(
+  Future<void> _openInstance(
+    BuildContext context,
+    WidgetRef ref,
+    InstanceProfile profile,
+  ) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => InstanceWebViewPage(profile: profile)),
     );
+    if (context.mounted) ref.invalidate(instancesProvider);
   }
 
   Future<void> _confirmDelete(
@@ -277,11 +282,15 @@ class _InstanceCard extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: scheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.public, color: scheme.primary, size: 22),
+                child: Image.asset(
+                  'assets/branding/olivos.png',
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -289,7 +298,7 @@ class _InstanceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      profile.name,
+                      profile.displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
