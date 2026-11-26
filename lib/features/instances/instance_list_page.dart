@@ -53,13 +53,16 @@ class InstanceListPage extends ConsumerWidget {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
-            onPressed: () => ref
-                .read(themeModeProvider.notifier)
-                .toggle(Theme.of(context).brightness),
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
+              onPressed: () => ref
+                  .read(themeModeProvider.notifier)
+                  .toggle(Theme.of(context).brightness),
+              icon: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              ),
             ),
           ),
         ],
