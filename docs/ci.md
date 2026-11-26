@@ -8,7 +8,7 @@
 
 | Job | Runner | 内容 |
 | --- | --- | --- |
-| `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test` |
+| `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
 | `android` | ubuntu-latest | debug APK（非 tag）/ release APK（tag） |
 | `windows` | windows-latest | Windows Release 便携 zip + Inno Setup 安装包 |
 | `macos` | macos-latest | macOS Release `.app` 打包 |
@@ -34,7 +34,26 @@
 - Windows 校验：`olivos-companion-windows-SHA256SUMS.txt`
 - macOS：`olivos-companion-macos.zip`
 - iOS：`olivos-companion-ios.zip`（未签名）
+- 覆盖率：`coverage/lcov.info`、JSON、Markdown 和 HTML 报告（`coverage` artifact）
 - tag：以上产物全部附加到 GitHub Release 草稿
+
+## 测试覆盖率
+
+- `validate` 使用 `flutter test --coverage` 生成 `coverage/lcov.info`
+- CI 安装 `lcov`，生成 HTML 报告到 `test-results/html`
+- `tools/coverage/coverage_summary.py` 生成 JSON 和 Markdown 覆盖率摘要
+- Markdown 摘要会写入 GitHub Actions 的 Job Summary
+- `coverage` artifact 包含 lcov、JSON、Markdown 和 HTML 报告
+- Flutter 当前的 lcov 报告通常只有行覆盖率，没有分支数据；统计脚本会明确显示这一点
+
+本地生成：
+
+```bash
+flutter test --coverage
+python3 tools/coverage/coverage_summary.py coverage/lcov.info \
+  --json test-results/coverage.json \
+  --markdown test-results/coverage-summary.md
+```
 
 ## Windows 安装版
 

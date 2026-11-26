@@ -19,7 +19,7 @@ env:
 
 jobs:
   validate:
-    name: Validate and test
+    name: Validate, test and coverage
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -29,10 +29,40 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
-      - run: flutter test
+      - name: Run tests with coverage
+        run: flutter test --coverage
+      - name: Generate coverage report
+        if: always()
+        run: |
+          mkdir -p test-results
+          if [ ! -f coverage/lcov.info ]; then
+            echo 'coverage/lcov.info not found; tests may have failed before coverage was written.' >&2
+            exit 0
+          fi
+          python3 tools/coverage/coverage_summary.py coverage/lcov.info \
+            --json test-results/coverage.json \
+            --markdown test-results/coverage-summary.md
+          if [ -f test-results/coverage-summary.md ]; then
+            cat test-results/coverage-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          genhtml coverage/lcov.info --output-directory test-results/html
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage
+          path: |
+            coverage/lcov.info
+            test-results/coverage.json
+            test-results/coverage-summary.md
+            test-results/html
+          if-no-files-found: warn
+          retention-days: 14
 
   android:
     name: Build Android

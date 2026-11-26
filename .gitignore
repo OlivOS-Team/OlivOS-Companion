@@ -93,9 +93,9 @@ userdata/
 *.msixbundle
 *.appx
 *.appxbundle
-coverage/
+/coverage/
 *.lcov
-test-results/
+/test-results/
 
 # 签名/证书（绝不入库）
 **/*.jks
