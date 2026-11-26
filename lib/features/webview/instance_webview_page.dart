@@ -8,6 +8,24 @@ import '../../data/auth_service.dart';
 import '../../data/instance_store.dart';
 import '../../models/instance_profile.dart';
 
+/// WebUI 的退出登录是页面内按钮；点击后通知原生页面退出。
+const _webUiLogoutBridge = r'''
+(function () {
+  if (window.__olivosLogoutBound) return;
+  window.__olivosLogoutBound = true;
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    if (!target.closest('#logout, button[aria-label="退出登录"]')) return;
+    try {
+      if (window.flutter_inappwebview) {
+        window.flutter_inappwebview.callHandler('olivosLogout');
+      }
+    } catch (_) {}
+  }, true);
+})();
+''';
+
 class InstanceWebViewPage extends StatefulWidget {
   const InstanceWebViewPage({super.key, required this.profile});
 
@@ -27,6 +45,7 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
   String? _loadError;
   bool _preparing = true;
   double _progress = 0;
+  bool _logoutHandled = false;
 
   @override
   void initState() {
@@ -105,191 +124,183 @@ class _InstanceWebViewPageState extends State<InstanceWebViewPage> {
     return false;
   }
 
-  Future<void> _clearSession() async {
-    final scheme = Theme.of(context).colorScheme;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清除会话'),
-        content: const Text('将清除该实例在应用内的登录状态，下次需要重新登录。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: scheme.errorContainer,
-              foregroundColor: scheme.error,
-              side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('清除'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    await _controller?.evaluateJavascript(
-      source: 'localStorage.clear(); sessionStorage.clear();',
-    );
-    await InAppWebViewController.clearAllCache();
-    await CookieManager.instance().deleteAllCookies();
-    await _store.deletePassword(widget.profile.id);
-    await _controller?.reload();
+  Future<void> _handleBack() async {
+    if (_controller != null && await _controller!.canGoBack()) {
+      await _controller!.goBack();
+      return;
+    }
+    if (mounted) Navigator.of(context).pop();
   }
 
-  Future<void> _onMenuSelected(String value) async {
-    switch (value) {
-      case 'browser':
-        await _openExternal(Uri.parse(widget.profile.baseUrl));
-      case 'clear':
-        await _clearSession();
-    }
+  Future<void> _handleWebUiLogout() async {
+    if (_logoutHandled) return;
+    _logoutHandled = true;
+    // 给 WebUI 的 /api/logout 一点时间完成，然后回到实例列表。
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.profile.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+    final colorScheme = Theme.of(context).colorScheme;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        body: _preparing
+            ? const Center(child: CircularProgressIndicator())
+            : SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        if (_authError != null)
+                          _Notice(
+                            message: '自动登录失败：$_authError。已回退到 WebUI 登录页。',
+                            icon: Icons.error_outline,
+                            background: colorScheme.errorContainer,
+                            border: colorScheme.error.withValues(alpha: 0.35),
+                            foreground: colorScheme.onErrorContainer,
+                          ),
+                        if (_loadError != null)
+                          _Notice(
+                            message: _loadError!,
+                            icon: Icons.info_outline,
+                            background: colorScheme.surfaceContainerHighest,
+                            border: colorScheme.outline,
+                            foreground: colorScheme.onSurface,
+                          ),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              InAppWebView(
+                                initialUrlRequest: URLRequest(
+                                  url: WebUri(widget.profile.baseUrl),
+                                ),
+                                initialSettings: InAppWebViewSettings(
+                                  useShouldOverrideUrlLoading: true,
+                                  javaScriptEnabled: true,
+                                  domStorageEnabled: true,
+                                ),
+                                initialUserScripts:
+                                    UnmodifiableListView<UserScript>([
+                                      if (_tokenScript != null)
+                                        UserScript(
+                                          source: _tokenScript!,
+                                          injectionTime: UserScriptInjectionTime
+                                              .AT_DOCUMENT_START,
+                                        ),
+                                    ]),
+                                onWebViewCreated: (controller) {
+                                  _controller = controller;
+                                  controller.addJavaScriptHandler(
+                                    handlerName: 'olivosLogout',
+                                    callback: (args) {
+                                      _handleWebUiLogout();
+                                      return null;
+                                    },
+                                  );
+                                },
+                                onLoadStart: (controller, url) {
+                                  setState(() => _loadError = null);
+                                },
+                                onLoadStop: (controller, url) {
+                                  setState(() {
+                                    _progress = 1;
+                                    _loadError = null;
+                                  });
+                                  controller.evaluateJavascript(
+                                    source: _webUiLogoutBridge,
+                                  );
+                                },
+                                onProgressChanged: (controller, progress) {
+                                  setState(() => _progress = progress / 100);
+                                },
+                                onReceivedError: (controller, request, error) {
+                                  if (request.isForMainFrame ?? false) {
+                                    setState(() {
+                                      _loadError =
+                                          '页面加载失败：${error.description}';
+                                    });
+                                  }
+                                },
+                                shouldOverrideUrlLoading: _handleNavigation,
+                                onCreateWindow: _handleCreateWindow,
+                              ),
+                              if (_progress > 0 && _progress < 1)
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: LinearProgressIndicator(
+                                    value: _progress,
+                                    minHeight: 2,
+                                    backgroundColor: colorScheme.outlineVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      right: 12,
+                      bottom: MediaQuery.paddingOf(context).bottom + 12,
+                      child: _OverlayControls(
+                        onBack: _handleBack,
+                        onRefresh: () => _controller?.reload(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Text(
-              widget.profile.baseUrl,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
+      ),
+    );
+  }
+}
+
+class _OverlayControls extends StatelessWidget {
+  const _OverlayControls({required this.onBack, required this.onRefresh});
+
+  final VoidCallback onBack;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: scheme.surface.withValues(alpha: 0.94),
+      elevation: 1,
+      shadowColor: theme.shadowColor,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: '返回',
+            onPressed: onBack,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+            icon: const Icon(Icons.arrow_back, size: 20),
+          ),
+          Container(width: 1, height: 18, color: scheme.outlineVariant),
           IconButton(
             tooltip: '刷新',
-            onPressed: () => _controller?.reload(),
-            icon: const Icon(Icons.refresh),
-          ),
-          PopupMenuButton<String>(
-            onSelected: _onMenuSelected,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'browser',
-                child: Row(
-                  children: [
-                    Icon(Icons.open_in_browser, size: 18),
-                    SizedBox(width: 8),
-                    Text('在浏览器打开'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 18, color: colorScheme.error),
-                    const SizedBox(width: 8),
-                    Text('清除会话', style: TextStyle(color: colorScheme.error)),
-                  ],
-                ),
-              ),
-            ],
+            onPressed: onRefresh,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+            icon: const Icon(Icons.refresh, size: 20),
           ),
         ],
       ),
-      body: _preparing
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (_authError != null)
-                  _Notice(
-                    message: '自动登录失败：$_authError。已回退到 WebUI 登录页。',
-                    icon: Icons.error_outline,
-                    background: colorScheme.errorContainer,
-                    border: colorScheme.error.withValues(alpha: 0.35),
-                    foreground: colorScheme.onErrorContainer,
-                  ),
-                if (_loadError != null)
-                  _Notice(
-                    message: _loadError!,
-                    icon: Icons.info_outline,
-                    background: colorScheme.surfaceContainerHighest,
-                    border: colorScheme.outline,
-                    foreground: colorScheme.onSurface,
-                  ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      InAppWebView(
-                        initialUrlRequest: URLRequest(
-                          url: WebUri(widget.profile.baseUrl),
-                        ),
-                        initialSettings: InAppWebViewSettings(
-                          useShouldOverrideUrlLoading: true,
-                          javaScriptEnabled: true,
-                          domStorageEnabled: true,
-                        ),
-                        initialUserScripts: UnmodifiableListView<UserScript>([
-                          if (_tokenScript != null)
-                            UserScript(
-                              source: _tokenScript!,
-                              injectionTime:
-                                  UserScriptInjectionTime.AT_DOCUMENT_START,
-                            ),
-                        ]),
-                        onWebViewCreated: (controller) {
-                          _controller = controller;
-                        },
-                        onLoadStart: (controller, url) {
-                          setState(() => _loadError = null);
-                        },
-                        onLoadStop: (controller, url) {
-                          setState(() {
-                            _progress = 1;
-                            _loadError = null;
-                          });
-                        },
-                        onProgressChanged: (controller, progress) {
-                          setState(() => _progress = progress / 100);
-                        },
-                        onReceivedError: (controller, request, error) {
-                          if (request.isForMainFrame ?? false) {
-                            setState(() {
-                              _loadError = '页面加载失败：${error.description}';
-                            });
-                          }
-                        },
-                        shouldOverrideUrlLoading: _handleNavigation,
-                        onCreateWindow: _handleCreateWindow,
-                      ),
-                      if (_progress > 0 && _progress < 1)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: LinearProgressIndicator(
-                            value: _progress,
-                            minHeight: 2,
-                            backgroundColor: colorScheme.outlineVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }

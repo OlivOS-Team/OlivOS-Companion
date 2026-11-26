@@ -110,3 +110,5 @@ test-results/
 
 # 本地环境覆盖
 tools/env.local.*
+# Widget Preview related
+.widget_preview/
