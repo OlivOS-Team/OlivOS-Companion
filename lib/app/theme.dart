@@ -366,10 +366,15 @@ ThemeData buildOlivOSTheme(Brightness brightness) {
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: colors.text,
-      contentTextStyle: textTheme.bodyMedium?.copyWith(color: colors.panel),
+      backgroundColor: colors.panel,
+      contentTextStyle: textTheme.bodyMedium?.copyWith(color: colors.text),
+      actionTextColor: colors.accent,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: controlRadius),
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: controlRadius,
+        side: BorderSide(color: colors.line),
+      ),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
       color: colors.accent,
