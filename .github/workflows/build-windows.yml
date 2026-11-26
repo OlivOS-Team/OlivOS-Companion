@@ -1,0 +1,42 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: NuGet/setup-nuget@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.1'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Package artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist -Recurse
+          Compress-Archive -Path dist\* -DestinationPath olivos-companion-windows.zip
+          Get-Item olivos-companion-windows.zip | Format-List Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: olivos-companion-windows.zip
+          if-no-files-found: error
+          retention-days: 14

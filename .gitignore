@@ -1,2 +1,105 @@
 # ZCode 本地工作目录（计划与暂存文件，不入库）
 .zcode/
+
+# IDE / 编辑器
+.idea/
+.vs/
+.fleet/
+.history/
+*.iml
+*.xcuserstate
+CMakeUserPresets.json
+compile_commands.json
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地/临时/日志
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+.env
+.env.*
+!.env.example
+secrets.json
+**/local.properties
+pubspec_overrides.yaml
+devtools_options.yaml
+.fvm/
+.kotlin/
+**/.cxx/
+
+# Flutter / Dart 生成物
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+**/GeneratedPluginRegistrant.*
+**/generated_plugin_registrant.*
+**/generated_plugins.cmake
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
+linux/flutter/ephemeral/
+
+# 平台构建/缓存
+android/.gradle/
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/gradle-wrapper.jar
+ios/Pods/
+ios/.symlinks/
+macos/Pods/
+macos/.symlinks/
+**/.swiftpm/
+
+# 构建产物 / 安装包
+dist/
+artifacts/
+*.apk
+*.aab
+*.ipa
+*.dmg
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+coverage/
+*.lcov
+test-results/
+
+# 签名/证书（绝不入库）
+**/*.jks
+**/*.keystore
+**/key.properties
+**/*.p12
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.mobileprovision
+**/*.provisionprofile
+**/*.p8
+**/google-services.json
+**/GoogleService-Info.plist
+**/*.cer
+**/*.crt
+
+# 本地环境覆盖
+tools/env.local.*
