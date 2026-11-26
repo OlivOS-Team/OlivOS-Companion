@@ -62,34 +62,6 @@ class InstanceListPage extends ConsumerWidget {
               isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
             ),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'import') _importFromClipboard(context, ref);
-              if (value == 'export-all') _exportAll(context, ref);
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'import',
-                child: Row(
-                  children: [
-                    const Icon(Icons.content_paste_go, size: 18),
-                    const SizedBox(width: 8),
-                    const Text('从剪贴板导入'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'export-all',
-                child: Row(
-                  children: [
-                    const Icon(Icons.content_copy, size: 18),
-                    const SizedBox(width: 8),
-                    const Text('导出全部到剪贴板'),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ],
       ),
       body: instances.when(
@@ -98,6 +70,8 @@ class InstanceListPage extends ConsumerWidget {
         data: (items) => _InstanceListBody(
           items: items,
           onAdd: () => _showAddDialog(context),
+          onImport: () => _importFromClipboard(context, ref),
+          onExportAll: () => _exportAll(context, ref),
           onOpen: (profile) => _openInstance(context, ref, profile),
           onExport: (profile) => _exportSingle(context, ref, profile),
           onDelete: (profile) => _confirmDelete(context, ref, profile),
@@ -298,6 +272,8 @@ class _InstanceListBody extends StatelessWidget {
   const _InstanceListBody({
     required this.items,
     required this.onAdd,
+    required this.onImport,
+    required this.onExportAll,
     required this.onOpen,
     required this.onExport,
     required this.onDelete,
@@ -305,6 +281,8 @@ class _InstanceListBody extends StatelessWidget {
 
   final List<InstanceProfile> items;
   final VoidCallback onAdd;
+  final VoidCallback onImport;
+  final VoidCallback onExportAll;
   final ValueChanged<InstanceProfile> onOpen;
   final ValueChanged<InstanceProfile> onExport;
   final ValueChanged<InstanceProfile> onDelete;
@@ -321,7 +299,12 @@ class _InstanceListBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _SectionHeader(count: items.length, onAdd: onAdd),
+                _SectionHeader(
+                  count: items.length,
+                  onAdd: onAdd,
+                  onImport: onImport,
+                  onExportAll: onExportAll,
+                ),
                 const SizedBox(height: 16),
                 Expanded(
                   child: items.isEmpty
@@ -352,10 +335,17 @@ class _InstanceListBody extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.count, required this.onAdd});
+  const _SectionHeader({
+    required this.count,
+    required this.onAdd,
+    required this.onImport,
+    required this.onExportAll,
+  });
 
   final int count;
   final VoidCallback onAdd;
+  final VoidCallback onImport;
+  final VoidCallback onExportAll;
 
   @override
   Widget build(BuildContext context) {
@@ -375,12 +365,143 @@ class _SectionHeader extends StatelessWidget {
             ],
           ),
         ),
-        FilledButton.icon(
+        _SplitMenuButton(
+          label: '导出',
+          icon: Icons.file_upload_outlined,
+          tooltip: '导出选项',
+          onPressed: onExportAll,
+          onSelected: (value) {
+            if (value == 'export') onExportAll();
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'export',
+              child: Row(
+                children: [
+                  Icon(Icons.content_copy, size: 18),
+                  SizedBox(width: 8),
+                  Text('导出到剪贴板'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 8),
+        _SplitMenuButton(
+          primary: true,
+          label: '添加',
+          icon: Icons.add,
+          tooltip: '添加选项',
           onPressed: onAdd,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('添加实例'),
+          onSelected: (value) {
+            if (value == 'add') onAdd();
+            if (value == 'import') onImport();
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'add',
+              child: Row(
+                children: [
+                  Icon(Icons.add, size: 18),
+                  SizedBox(width: 8),
+                  Text('添加实例'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'import',
+              child: Row(
+                children: [
+                  Icon(Icons.content_paste_go, size: 18),
+                  SizedBox(width: 8),
+                  Text('从剪贴板导入'),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _SplitMenuButton extends StatelessWidget {
+  const _SplitMenuButton({
+    required this.label,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    required this.onSelected,
+    required this.itemBuilder,
+    this.primary = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final ValueChanged<String> onSelected;
+  final List<PopupMenuEntry<String>> Function(BuildContext) itemBuilder;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final foreground = primary ? scheme.onPrimary : scheme.onSurface;
+    final background = primary
+        ? scheme.primary
+        : scheme.surfaceContainerHighest;
+    final borderColor = primary ? scheme.primary : scheme.outline;
+    final dividerColor = primary
+        ? scheme.onPrimary.withValues(alpha: 0.35)
+        : scheme.outline;
+
+    return Material(
+      color: background,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: onPressed,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 18, color: foreground),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(width: 1, height: 18, color: dividerColor),
+          PopupMenuButton<String>(
+            tooltip: tooltip,
+            onSelected: onSelected,
+            itemBuilder: itemBuilder,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                size: 18,
+                color: foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
