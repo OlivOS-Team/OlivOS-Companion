@@ -67,7 +67,7 @@ jobs:
   # Platform builds start only after validation succeeds, but are independent of
   # each other and run in parallel. All four must succeed before the tag release.
   build-android:
-    name: build-android
+    name: Build Android
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -134,7 +134,7 @@ jobs:
           retention-days: 14
 
   build-windows:
-    name: build-windows
+    name: Build Windows
     needs: validate
     runs-on: windows-latest
     timeout-minutes: 50
@@ -203,7 +203,7 @@ jobs:
           retention-days: 14
 
   build-macos:
-    name: build-macos
+    name: Build macOS
     needs: validate
     runs-on: macos-latest
     timeout-minutes: 40
@@ -233,7 +233,7 @@ jobs:
           retention-days: 14
 
   build-ios:
-    name: build-ios
+    name: Build iOS (unsigned)
     needs: validate
     runs-on: macos-latest
     timeout-minutes: 40

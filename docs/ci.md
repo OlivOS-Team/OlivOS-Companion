@@ -6,16 +6,18 @@
 
 `Build` 工作流包含：
 
-| Job | Runner | 内容 |
-| --- | --- | --- |
-| `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
-| `build-android` | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
-| `build-windows` | windows-latest | Windows Release 便携目录 + Inno Setup 安装包，分两个 artifact 上传 |
-| `build-macos` | macos-latest | macOS Release `.app` 打包 |
-| `build-ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
-| `release-draft` | ubuntu-latest | tag 触发，仅汇总发布文件并创建 GitHub Release 草稿 |
+| Job ID | 显示名称 | Runner | 内容 |
+| --- | --- | --- | --- |
+| `validate` | Validate, test and coverage | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
+| `build-android` | Build Android | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
+| `build-windows` | Build Windows | windows-latest | Windows Release 便携目录 + Inno Setup 安装包，分两个 artifact 上传 |
+| `build-macos` | Build macOS | macos-latest | macOS Release `.app` 打包 |
+| `build-ios` | Build iOS (unsigned) | macos-latest | `flutter build ios --no-codesign` 未签名包 |
+| `release-draft` | Release draft | ubuntu-latest | tag 触发，仅汇总发布文件并创建 GitHub Release 草稿 |
 
 四个平台构建都依赖 `validate` 通过，彼此独立并行执行；`release-draft` 依赖 `validate` 和四平台构建全部成功。
+
+Job ID 用于 `needs` 和 Actions API；显示名称用于 Actions 页面。artifact 名称独立于 Job ID，例如 `build-android` 上传的 artifact 仍叫 `android`。
 
 ## 触发
 
