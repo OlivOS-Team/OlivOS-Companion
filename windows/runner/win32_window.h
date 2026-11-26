@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 // A class abstraction for a high DPI-aware Win32 Window. Intended to be
@@ -52,6 +53,9 @@ class Win32Window {
   // If true, closing this window will quit the application.
   void SetQuitOnClose(bool quit_on_close);
 
+  // Overrides the system theme used for the native title bar.
+  void SetThemeOverride(std::optional<bool> dark_mode);
+
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
 
@@ -87,8 +91,10 @@ class Win32Window {
   // Retrieves a class instance pointer for |window|
   static Win32Window* GetThisFromHandle(HWND const window) noexcept;
 
-  // Update the window frame's theme to match the system theme.
-  static void UpdateTheme(HWND const window);
+  // Update the window frame's theme to match the app or system theme.
+  void UpdateTheme(HWND const window);
+
+  std::optional<bool> theme_override_;
 
   bool quit_on_close_ = false;
 

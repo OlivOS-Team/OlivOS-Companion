@@ -291,6 +291,13 @@ void Win32Window::SetQuitOnClose(bool quit_on_close) {
   quit_on_close_ = quit_on_close;
 }
 
+void Win32Window::SetThemeOverride(std::optional<bool> dark_mode) {
+  theme_override_ = dark_mode;
+  if (window_handle_ != nullptr) {
+    UpdateTheme(window_handle_);
+  }
+}
+
 bool Win32Window::OnCreate() {
   // No-op; provided for subclasses.
   return true;
@@ -301,31 +308,36 @@ void Win32Window::OnDestroy() {
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
-  DWORD light_mode;
-  DWORD light_mode_size = sizeof(light_mode);
-  LSTATUS result = RegGetValue(HKEY_CURRENT_USER, kGetPreferredBrightnessRegKey,
-                               kGetPreferredBrightnessRegValue,
-                               RRF_RT_REG_DWORD, nullptr, &light_mode,
-                               &light_mode_size);
-
-  if (result == ERROR_SUCCESS) {
-    BOOL enable_dark_mode = light_mode == 0;
-    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
-                          &enable_dark_mode, sizeof(enable_dark_mode));
-
-    // Setting explicit title bar colors prevents Windows from graying them out
-    // when the window loses focus.
-    COLORREF caption_color =
-        enable_dark_mode ? RGB(0x22, 0x25, 0x2A) : RGB(0xFF, 0xFF, 0xFF);
-    COLORREF text_color =
-        enable_dark_mode ? RGB(0xEA, 0xED, 0xF0) : RGB(0x20, 0x25, 0x2B);
-    COLORREF border_color =
-        enable_dark_mode ? RGB(0x3B, 0x40, 0x47) : RGB(0xDC, 0xE1, 0xE6);
-    DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption_color,
-                          sizeof(caption_color));
-    DwmSetWindowAttribute(window, DWMWA_TEXT_COLOR, &text_color,
-                          sizeof(text_color));
-    DwmSetWindowAttribute(window, DWMWA_BORDER_COLOR, &border_color,
-                          sizeof(border_color));
+  bool enable_dark_mode = false;
+  if (theme_override_.has_value()) {
+    enable_dark_mode = theme_override_.value();
+  } else {
+    DWORD light_mode;
+    DWORD light_mode_size = sizeof(light_mode);
+    LSTATUS result = RegGetValue(
+        HKEY_CURRENT_USER, kGetPreferredBrightnessRegKey,
+        kGetPreferredBrightnessRegValue, RRF_RT_REG_DWORD, nullptr,
+        &light_mode, &light_mode_size);
+    if (result != ERROR_SUCCESS) return;
+    enable_dark_mode = light_mode == 0;
   }
+
+  BOOL dark_mode = enable_dark_mode ? TRUE : FALSE;
+  DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark_mode,
+                        sizeof(dark_mode));
+
+  // Setting explicit title bar colors prevents Windows from graying them out
+  // when the window loses focus.
+  COLORREF caption_color =
+      enable_dark_mode ? RGB(0x22, 0x25, 0x2A) : RGB(0xFF, 0xFF, 0xFF);
+  COLORREF text_color =
+      enable_dark_mode ? RGB(0xEA, 0xED, 0xF0) : RGB(0x20, 0x25, 0x2B);
+  COLORREF border_color =
+      enable_dark_mode ? RGB(0x3B, 0x40, 0x47) : RGB(0xDC, 0xE1, 0xE6);
+  DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption_color,
+                        sizeof(caption_color));
+  DwmSetWindowAttribute(window, DWMWA_TEXT_COLOR, &text_color,
+                        sizeof(text_color));
+  DwmSetWindowAttribute(window, DWMWA_BORDER_COLOR, &border_color,
+                        sizeof(border_color));
 }

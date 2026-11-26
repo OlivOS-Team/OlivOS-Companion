@@ -1,0 +1,21 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+
+/// Keeps the native window title bar in sync with the Flutter theme.
+class WindowThemeService {
+  static const _channel = MethodChannel('olivos_companion/window');
+  static bool? _lastDark;
+
+  static Future<void> setDark(bool dark) async {
+    if ((!Platform.isWindows && !Platform.isMacOS) || _lastDark == dark) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod<void>('setTitleBarTheme', dark);
+      _lastDark = dark;
+    } catch (_) {
+      // The window may be unavailable during shutdown.
+    }
+  }
+}
