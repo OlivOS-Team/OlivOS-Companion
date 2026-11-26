@@ -35,9 +35,13 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  # 6.2.0-beta.3 修复 Android 新版 AGP 对 proguard-android.txt 的硬错误；
-  # 稳定版发布修复后再升级。
-  flutter_inappwebview: 6.2.0-beta.3
+  # 使用 OlivOS-Team 维护的 fork：包含 Windows 焦点补丁，详见 fork 根目录
+  # 的 OLIVOS_PATCH.md。上游恢复维护并包含修复后，切回 pub.dev 版本。
+  flutter_inappwebview:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview
   flutter_riverpod: ^3.5.0
   http: ^1.6.0
   shared_preferences: ^2.5.6
@@ -99,3 +103,48 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# 所有 flutter_inappwebview 平台实现固定到同一个 fork commit，避免部分包
+# 继续跟随上游 pub.dev，也确保 Windows 使用 WS_CHILD 焦点补丁。
+# 上游修复并发布后删除这些 override，同时把 flutter_inappwebview 切回 pub.dev。
+dependency_overrides:
+  flutter_inappwebview_android:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_android
+  flutter_inappwebview_internal_annotations:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: dev_packages/flutter_inappwebview_internal_annotations
+  flutter_inappwebview_ios:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_ios
+  flutter_inappwebview_linux:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_linux
+  flutter_inappwebview_macos:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_macos
+  flutter_inappwebview_platform_interface:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_platform_interface
+  flutter_inappwebview_web:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_web
+  flutter_inappwebview_windows:
+    git:
+      url: https://github.com/OlivOS-Team/flutter_inappwebview.git
+      ref: 839a9858a418ba284019d521cea82eacd1968a77
+      path: flutter_inappwebview_windows

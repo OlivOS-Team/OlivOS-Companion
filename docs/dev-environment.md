@@ -114,6 +114,15 @@ flutter run -d android
 - 本地 macOS 构建也需要设置 `FLUTTER_SWIFT_PACKAGE_MANAGER=false`，再执行 `flutter build macos`。
 - 插件上游修复后，移除该开关和 Podfile 兼容设置即可恢复 SPM。
 
+## Windows WebView 插件补丁
+
+- 使用 OlivOS-Team 维护的 fork：<https://github.com/OlivOS-Team/flutter_inappwebview>。
+- 维护分支：`olivos/windows-focus-fix`；项目通过 commit `839a9858a418ba284019d521cea82eacd1968a77` 固定依赖。
+- 补丁把 `CustomPlatformView` 窗口从 style `0` 改为 `WS_CHILD | WS_CLIPSIBLINGS`。原实现创建的是 owned top-level window，点击 WebView 时会激活它自己，导致 Flutter runner 失活、标题栏变色并影响焦点行为。
+- `pubspec.yaml` 的 `flutter_inappwebview` 以及全部 `flutter_inappwebview_*` 平台实现都指向该 fork；不再使用本地 `third_party` 副本，也不再混用 pub.dev 上的平台包。
+- 补丁说明、上游状态和移除条件见 fork 根目录的 `OLIVOS_PATCH.md`。
+- 上游修复并发布后，切回 pub.dev 版本并删除 `dependency_overrides`。
+
 ## 应用图标
 
 - 母图：`resource/favoricon.ico`（256×256，OlivOS 图标）。
