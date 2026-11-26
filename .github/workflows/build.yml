@@ -72,7 +72,7 @@ jobs:
     name: Build Windows
     needs: validate
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v5
       - uses: NuGet/setup-nuget@v1
@@ -81,18 +81,58 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: flutter build windows --release
-      - name: Package artifact
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Download VC++ redistributable
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist -Recurse
-          Compress-Archive -Path dist\* -DestinationPath olivos-companion-windows.zip
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force windows\installer\redist | Out-Null
+          curl.exe -L --fail --retry 3 --retry-delay 2 -o windows\installer\redist\vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe
+          $file = Get-Item windows\installer\redist\vc_redist.x64.exe
+          if ($file.Length -lt 1MB) { throw 'VC++ redistributable download is incomplete' }
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Package portable and installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force dist\portable | Out-Null
+          Copy-Item -Path build\windows\x64\runner\Release\* -Destination dist\portable -Recurse -Force
+          Compress-Archive -Path dist\portable\* -DestinationPath olivos-companion-windows-portable-x64.zip -Force
+
+          $rawVersion = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value.Trim()
+          if (-not $rawVersion) { throw 'Could not read version from pubspec.yaml' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag') { $rawVersion = $env:GITHUB_REF_NAME.TrimStart('v') }
+          $installerVersion = ($rawVersion -split '\+')[0]
+          $numericVersion = ($installerVersion -split '-')[0]
+
+          $iscc = $null
+          $command = Get-Command iscc.exe -ErrorAction SilentlyContinue
+          if ($command) { $iscc = $command.Source }
+          if (-not $iscc) { $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
+          if (-not (Test-Path $iscc)) { throw 'ISCC.exe not found' }
+
+          & $iscc "/DMyAppVersion=$installerVersion" "/DMyAppVersionNumeric=$numericVersion" windows\installer\olivos-companion.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+          $installer = 'dist\olivos-companion-windows-setup-x64.exe'
+          if (-not (Test-Path $installer)) { throw 'Installer was not created' }
+          Copy-Item -Path $installer -Destination 'olivos-companion-windows-setup-x64.exe' -Force
+
+          $hashes = foreach ($file in @('olivos-companion-windows-portable-x64.zip', $installer)) {
+            $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $file)"
+          }
+          $hashes | Set-Content -Path olivos-companion-windows-SHA256SUMS.txt -Encoding ascii
       - uses: actions/upload-artifact@v6
         with:
           name: windows
-          path: olivos-companion-windows.zip
+          path: |
+            olivos-companion-windows-portable-x64.zip
+            olivos-companion-windows-setup-x64.exe
+            olivos-companion-windows-SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -171,3 +211,16 @@ jobs:
           allowUpdates: true
           removeArtifacts: true
           artifacts: release-artifacts/**/*
+          body: |
+            ## Windows
+
+            - 安装版（推荐）：`olivos-companion-windows-setup-x64.exe`
+            - 便携版：`olivos-companion-windows-portable-x64.zip`
+            - SHA-256 校验：`olivos-companion-windows-SHA256SUMS.txt`
+
+            安装版会安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装
+            Microsoft Visual C++ 2015-2022 x64 运行库。首次运行需要系统中的
+            Microsoft Edge WebView2 Runtime（Windows 11 通常已内置）。
+
+            便携版不会安装运行库，目标机器仍需 Microsoft Visual C++ 2015-2022
+            x64 运行库和 WebView2 Runtime。
