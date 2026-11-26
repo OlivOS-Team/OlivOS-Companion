@@ -308,7 +308,7 @@ class _InstanceListBody extends StatelessWidget {
                 const SizedBox(height: 16),
                 Expanded(
                   child: items.isEmpty
-                      ? _EmptyState(onAdd: onAdd)
+                      ? _EmptyState(onAdd: onAdd, onImport: onImport)
                       : ListView.separated(
                           padding: EdgeInsets.zero,
                           itemCount: items.length,
@@ -404,7 +404,7 @@ class _SectionHeader extends StatelessWidget {
                 children: [
                   Icon(Icons.add, size: 18),
                   SizedBox(width: 8),
-                  Text('添加实例'),
+                  Text('手动添加'),
                 ],
               ),
             ),
@@ -507,9 +507,10 @@ class _SplitMenuButton extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
+  const _EmptyState({required this.onAdd, required this.onImport});
 
   final VoidCallback onAdd;
+  final VoidCallback onImport;
 
   @override
   Widget build(BuildContext context) {
@@ -545,10 +546,22 @@ class _EmptyState extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('添加实例'),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: onAdd,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('添加实例'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onImport,
+                      icon: const Icon(Icons.content_paste_go, size: 18),
+                      label: const Text('从剪贴板导入'),
+                    ),
+                  ],
                 ),
               ],
             ),
