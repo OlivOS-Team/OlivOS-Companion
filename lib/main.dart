@@ -19,6 +19,9 @@ class OlivOSCompanionApp extends StatelessWidget {
     return MaterialApp(
       title: 'OlivOS Companion',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: buildOlivOSTheme(Brightness.light),
       darkTheme: buildOlivOSTheme(Brightness.dark),
       themeMode: ThemeMode.system,
