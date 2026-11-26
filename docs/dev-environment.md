@@ -94,6 +94,7 @@ flutter run -d android
   - `OlivOS Companion (macOS)`：`deviceId=macos`
 - `.vscode/settings.json`：`dart.flutterSdkPath = ${env:FLUTTER_HOME}`
 - `.vscode/extensions.json`：推荐 `Dart-Code.flutter` 与 `Dart-Code.dart-code`
+- Visual Studio 原生开发（Windows runner / 插件 C++ 调试）见 `docs/visual-studio.md`。
 - 需要安装 Dart/Flutter 扩展。
 - 需要设置 `FLUTTER_HOME`、`PUB_CACHE`，并确保 NuGet CLI 在 `PATH` 中。
 - 设置环境变量后需要**完全退出并重新打开 VS Code**，否则 `${env:FLUTTER_HOME}` 解析不到。

@@ -70,6 +70,13 @@ macos/Pods/
 macos/.symlinks/
 **/.swiftpm/
 
+# Visual Studio 生成文件
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
 # 构建产物 / 安装包
 dist/
 artifacts/

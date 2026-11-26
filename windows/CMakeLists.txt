@@ -68,6 +68,14 @@ include(flutter/generated_plugins.cmake)
 # run in place. This is done instead of making a separate bundle (as on Linux)
 # so that building and running from within Visual Studio will work.
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
+
+# Visual Studio 解决方案：默认启动应用目标，并把调试工作目录设为可执行文件目录，
+# 保证 data/flutter_assets 等相对资源可被正确找到。
+if(MSVC)
+  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${BINARY_NAME})
+  set_target_properties(${BINARY_NAME} PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${BUILD_BUNDLE_DIR}")
+endif()
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
