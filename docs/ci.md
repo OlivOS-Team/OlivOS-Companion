@@ -9,7 +9,7 @@
 | Job | Runner | 内容 |
 | --- | --- | --- |
 | `validate` | ubuntu-latest | `flutter pub get`、格式检查、`flutter analyze`、`flutter test --coverage`、覆盖率报告 |
-| `android` | ubuntu-latest | debug APK（非 tag）/ release APK（tag） |
+| `android` | ubuntu-latest | 已配置签名时构建 release APK；未配置签名的非 tag 构建为 debug APK |
 | `windows` | windows-latest | Windows Release 便携 zip + Inno Setup 安装包 |
 | `macos` | macos-latest | macOS Release `.app` 打包 |
 | `ios` | macos-latest | `flutter build ios --no-codesign` 未签名包 |
@@ -28,7 +28,7 @@
 
 ## 产物
 
-- Android：`olivos-companion-android-debug.apk`（非 tag）或 `olivos-companion-android-release.apk`（tag）
+- Android：`olivos-companion-android-release.apk`（配置签名后，包括所有 tag 构建）或 `olivos-companion-android-debug.apk`（未配置签名的非 tag 构建）
 - Windows 便携版：`olivos-companion-windows-portable-x64.zip`
 - Windows 安装版：`olivos-companion-windows-setup-x64.exe`
 - Windows 校验：`olivos-companion-windows-SHA256SUMS.txt`
@@ -105,21 +105,76 @@ gh run view <run-id> --log-failed
 
 排查 CI 编译/链接/平台配置问题时使用该命令；本地不执行平台构建。
 
-## 签名
+## Android 签名
 
-首期侧载/内测：
+Android 要求覆盖安装的新 APK 与已安装版本使用同一签名证书。CI 必须使用固定的
+release keystore；如果继续使用 runner 每次临时生成的 debug keystore，不同构建的
+APK 签名不同，系统会报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`（安装失败 -7）。
 
-- Android：debug 或 unsigned release。
+### 1. 生成 release keystore（只需一次）
+
+在仓库外或已被忽略的路径生成并妥善备份：
+
+```bash
+keytool -genkeypair -v \
+  -keystore android/app/olivos-release.jks \
+  -alias olivos \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+`android/app/*.jks` 和 `android/key.properties` 已被 `.gitignore` 忽略，绝对不能提交。
+密码建议使用较长的安全随机字符串；如果 key 密码与 store 密码不同，请分别记录。
+
+### 2. 写入 GitHub Secrets
+
+将 keystore 转为 Base64：
+
+```powershell
+# Windows PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("android/app/olivos-release.jks")) |
+  Set-Content android-keystore.b64 -Encoding ascii
+```
+
+```bash
+# Linux / macOS
+base64 -w0 android/app/olivos-release.jks > android-keystore.b64
+```
+
+在 GitHub 仓库的 Settings → Secrets and variables → Actions 中添加：
+
+- `ANDROID_KEYSTORE_BASE64`：`android-keystore.b64` 的完整内容
+- `ANDROID_KEY_ALIAS`：上面命令中的 `olivos`
+- `ANDROID_KEY_PASSWORD`：key 密码
+- `ANDROID_STORE_PASSWORD`：keystore 密码
+
+设置完成后删除本地的 `android-keystore.b64`。这些值只放 Secrets，绝不入库。
+
+### 3. CI 行为
+
+- 四项 Secrets 齐全时，CI 解码 keystore 并生成 `android/key.properties`，构建
+  `olivos-companion-android-release.apk`；非 tag 构建和 tag 构建都使用同一签名。
+- tag 构建缺少签名 Secrets 会直接失败，避免发布无法升级的 APK。
+- 未配置签名的非 tag 构建（例如 PR）回退到 debug 签名并给出 warning，仅用于测试。
+
+### 4. 本地 release 构建
+
+复制 `android/key.properties.example` 为 `android/key.properties`，填入 keystore
+路径和密码，然后执行 `flutter build apk --release`。`storeFile` 使用绝对路径和
+正斜杠（如 `D:/secure/olivos-release.jks`），避免 Windows 反斜杠被 Java
+properties 当作转义字符。
+
+### 5. 升级注意
+
+历史版本使用 CI runner 的临时 debug keystore 签名，和新的固定 release key 不同，
+因此第一次切换到固定签名时无法覆盖安装，需要卸载旧版一次（会清除该应用的本地
+数据）。从这次固定签名开始，后续版本只要 `applicationId` 和签名 keystore 不变，
+就可以正常覆盖升级。不要更换 `applicationId`，也不要丢失 keystore。
+
+## 其他平台
+
 - Windows：未签名的便携 zip 和安装包；后续接代码签名。
 - macOS：ad-hoc 或未签名 zip。
 - iOS：`--no-codesign`，只出未签名包。
-
-正式签名材料放 GitHub Secrets，绝不入库：
-
-- `ANDROID_KEYSTORE_BASE64`
-- `ANDROID_KEY_ALIAS`
-- `ANDROID_KEY_PASSWORD`
-- `ANDROID_STORE_PASSWORD`
 - Apple 证书、描述文件、Team ID 后续接入。
 
 ## 本地复现（仅排查 CI 问题时）

@@ -81,10 +81,43 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Configure Android release signing
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ANDROID_KEYSTORE_BASE64}" ]]; then
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              echo "::error::Tag builds require Android signing secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, ANDROID_STORE_PASSWORD."
+              exit 1
+            fi
+            echo "::warning::Android signing secrets are not configured; this build will use the ephemeral debug key and cannot upgrade signed releases."
+            exit 0
+          fi
+
+          for name in ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_STORE_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Android signing secret ${name} is missing."
+              exit 1
+            fi
+          done
+
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | tr -d '\r\n' | base64 --decode > android/app/olivos-release.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' \
+            "${ANDROID_STORE_PASSWORD}" \
+            "${ANDROID_KEY_PASSWORD}" \
+            "${ANDROID_KEY_ALIAS}" \
+            "${GITHUB_WORKSPACE}/android/app/olivos-release.jks" > android/key.properties
+          chmod 600 android/app/olivos-release.jks android/key.properties
       - name: Build APK
         shell: bash
         run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          set -euo pipefail
+          if [[ -f android/key.properties ]]; then
             flutter build apk --release
             cp build/app/outputs/flutter-apk/app-release.apk olivos-companion-android-release.apk
           else

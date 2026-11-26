@@ -98,6 +98,7 @@ userdata/
 /test-results/
 
 # 签名/证书（绝不入库）
+android-keystore.b64
 **/*.jks
 **/*.keystore
 **/key.properties

@@ -12,6 +12,9 @@ OlivOS 多实例 WebUI 客户端。
 - **Windows 便携版**：`olivos-companion-windows-portable-x64.zip`
   - 解压即可运行，不写入安装目录；目标机器仍需 VC++ 2015-2022 x64 和 WebView2 Runtime。
 - Android、macOS、iOS 产物见 Releases 页面。
+- Android 覆盖升级要求 APK 使用同一签名。历史测试包使用 CI 临时 debug 签名，
+  如果提示“与已安装应用签名不同”，需要先卸载旧版一次；启用固定 release 签名后，
+  后续版本可以正常覆盖升级。
 
 Windows 安装包目前未签名，SmartScreen 可能提示；如介意可自行校验 Releases 中的 SHA-256 文件。
 

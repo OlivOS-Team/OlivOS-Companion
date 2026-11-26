@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties for local release builds.
+# Never commit key.properties or the keystore. Use forward slashes in storeFile.
+storePassword=change-me
+keyPassword=change-me
+keyAlias=olivos
+storeFile=D:/secure/olivos-release.jks
