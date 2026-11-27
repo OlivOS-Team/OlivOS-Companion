@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/url_utils.dart';
@@ -8,7 +10,14 @@ import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
 import '../../state/theme_mode_provider.dart';
 import '../about/about_dialog.dart';
+import '../qr/qr_code_dialog.dart';
+import '../qr/qr_image_decoder.dart';
+import '../qr/qr_scanner_page.dart';
 import '../webview/instance_webview_page.dart';
+
+bool get _supportsQrScanning =>
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
 
 class InstanceListPage extends ConsumerWidget {
   const InstanceListPage({super.key});
@@ -96,10 +105,14 @@ class InstanceListPage extends ConsumerWidget {
           items: items,
           onAdd: () => _showAddDialog(context),
           onImport: () => _importFromClipboard(context, ref),
+          onPickQrImage: () => _importQrFromGallery(context, ref),
+          onScanQr: _supportsQrScanning ? () => _scanQr(context, ref) : null,
           onExportAll: () => _exportAll(context, ref),
+          onExportAllQr: () => _exportAllQr(context, ref),
           onOpen: (profile) => _openInstance(context, ref, profile),
           onEdit: (profile) => _showEditDialog(context, ref, profile),
           onExport: (profile) => _exportSingle(context, ref, profile),
+          onExportQr: (profile) => _exportSingleQr(context, ref, profile),
           onDelete: (profile) => _confirmDelete(context, ref, profile),
         ),
       ),
@@ -179,6 +192,49 @@ class InstanceListPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _exportAllQr(BuildContext context, WidgetRef ref) async {
+    final profiles = ref.read(instancesProvider).value ?? const [];
+    if (profiles.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('没有可导出的实例')));
+      return;
+    }
+
+    try {
+      final entries = await _configEntries(ref, profiles);
+      if (!context.mounted) return;
+      await showConfigQrDialog(
+        context,
+        data: ConfigTransfer.encode(entries),
+        description: '全部实例（${entries.length} 个）',
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('生成二维码失败：$error')));
+    }
+  }
+
+  Future<void> _exportSingleQr(
+    BuildContext context,
+    WidgetRef ref,
+    InstanceProfile profile,
+  ) async {
+    try {
+      final entries = await _configEntries(ref, [profile]);
+      if (!context.mounted) return;
+      await showConfigQrDialog(
+        context,
+        data: ConfigTransfer.encode(entries),
+        description: '实例「${profile.name}」',
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('生成二维码失败：$error')));
+    }
+  }
+
   Future<void> _importFromClipboard(BuildContext context, WidgetRef ref) async {
     ClipboardData? data;
     try {
@@ -198,6 +254,57 @@ class InstanceListPage extends ConsumerWidget {
       return;
     }
 
+    if (!context.mounted) return;
+    await _importConfigText(context, ref, text);
+  }
+
+  Future<void> _importQrFromGallery(BuildContext context, WidgetRef ref) async {
+    final XFile? image;
+    try {
+      image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('选择图片失败：$error')));
+      return;
+    }
+    if (image == null || !context.mounted) return;
+
+    String? text;
+    try {
+      text = await decodeQrCodeFromImage(image.path);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('识别二维码失败：$error')));
+      return;
+    }
+    if (!context.mounted) return;
+    if (text == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('图片中没有识别到二维码')));
+      return;
+    }
+    await _importConfigText(context, ref, text, title: '导入二维码配置');
+  }
+
+  Future<void> _scanQr(BuildContext context, WidgetRef ref) async {
+    final text = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        fullscreenDialog: true,
+        builder: (_) => const QrScannerPage(),
+      ),
+    );
+    if (text == null || !context.mounted) return;
+    await _importConfigText(context, ref, text, title: '导入二维码配置');
+  }
+
+  Future<void> _importConfigText(
+    BuildContext context,
+    WidgetRef ref,
+    String text, {
+    String title = '从剪贴板导入',
+  }) async {
     List<InstanceConfigEntry> entries;
     try {
       entries = ConfigTransfer.decode(text);
@@ -212,7 +319,7 @@ class InstanceListPage extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('从剪贴板导入'),
+        title: Text(title),
         content: Text('将导入 ${entries.length} 个实例；相同地址的实例会被更新，是否继续？'),
         actions: [
           TextButton(
@@ -323,20 +430,28 @@ class _InstanceListBody extends StatefulWidget {
     required this.items,
     required this.onAdd,
     required this.onImport,
+    required this.onPickQrImage,
+    required this.onScanQr,
     required this.onExportAll,
+    required this.onExportAllQr,
     required this.onOpen,
     required this.onEdit,
     required this.onExport,
+    required this.onExportQr,
     required this.onDelete,
   });
 
   final List<InstanceProfile> items;
   final VoidCallback onAdd;
   final VoidCallback onImport;
+  final VoidCallback onPickQrImage;
+  final VoidCallback? onScanQr;
   final VoidCallback onExportAll;
+  final VoidCallback onExportAllQr;
   final ValueChanged<InstanceProfile> onOpen;
   final ValueChanged<InstanceProfile> onEdit;
   final ValueChanged<InstanceProfile> onExport;
+  final ValueChanged<InstanceProfile> onExportQr;
   final ValueChanged<InstanceProfile> onDelete;
 
   @override
@@ -374,7 +489,10 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
               count: widget.items.length,
               onAdd: widget.onAdd,
               onImport: widget.onImport,
+              onPickQrImage: widget.onPickQrImage,
+              onScanQr: widget.onScanQr,
               onExportAll: widget.onExportAll,
+              onExportAllQr: widget.onExportAllQr,
             ),
           ),
           const SizedBox(height: 16),
@@ -385,6 +503,8 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
                     child: _EmptyState(
                       onAdd: widget.onAdd,
                       onImport: widget.onImport,
+                      onPickQrImage: widget.onPickQrImage,
+                      onScanQr: widget.onScanQr,
                     ),
                   )
                 : Scrollbar(
@@ -415,6 +535,8 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
                                     onOpen: () => widget.onOpen(profile),
                                     onEdit: () => widget.onEdit(profile),
                                     onExport: () => widget.onExport(profile),
+                                    onExportQr: () =>
+                                        widget.onExportQr(profile),
                                     onDelete: () => widget.onDelete(profile),
                                   ),
                                 );
@@ -457,13 +579,19 @@ class _SectionHeader extends StatelessWidget {
     required this.count,
     required this.onAdd,
     required this.onImport,
+    required this.onPickQrImage,
+    required this.onScanQr,
     required this.onExportAll,
+    required this.onExportAllQr,
   });
 
   final int count;
   final VoidCallback onAdd;
   final VoidCallback onImport;
+  final VoidCallback onPickQrImage;
+  final VoidCallback? onScanQr;
   final VoidCallback onExportAll;
+  final VoidCallback onExportAllQr;
 
   @override
   Widget build(BuildContext context) {
@@ -490,6 +618,7 @@ class _SectionHeader extends StatelessWidget {
           onPressed: onExportAll,
           onSelected: (value) {
             if (value == 'export') onExportAll();
+            if (value == 'qr') onExportAllQr();
           },
           itemBuilder: (context) => [
             const PopupMenuItem(
@@ -499,6 +628,16 @@ class _SectionHeader extends StatelessWidget {
                   Icon(Icons.content_copy, size: 18),
                   SizedBox(width: 8),
                   Text('导出到剪贴板'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'qr',
+              child: Row(
+                children: [
+                  Icon(Icons.qr_code_2, size: 18),
+                  SizedBox(width: 8),
+                  Text('导出为二维码'),
                 ],
               ),
             ),
@@ -514,6 +653,8 @@ class _SectionHeader extends StatelessWidget {
           onSelected: (value) {
             if (value == 'add') onAdd();
             if (value == 'import') onImport();
+            if (value == 'pickQr') onPickQrImage();
+            if (value == 'scan') onScanQr?.call();
           },
           itemBuilder: (context) => [
             const PopupMenuItem(
@@ -536,6 +677,27 @@ class _SectionHeader extends StatelessWidget {
                 ],
               ),
             ),
+            const PopupMenuItem(
+              value: 'pickQr',
+              child: Row(
+                children: [
+                  Icon(Icons.photo_library_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('从相册选择'),
+                ],
+              ),
+            ),
+            if (onScanQr != null)
+              const PopupMenuItem(
+                value: 'scan',
+                child: Row(
+                  children: [
+                    Icon(Icons.qr_code_scanner, size: 18),
+                    SizedBox(width: 8),
+                    Text('扫描二维码'),
+                  ],
+                ),
+              ),
           ],
         ),
       ],
@@ -625,10 +787,17 @@ class _SplitMenuButton extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd, required this.onImport});
+  const _EmptyState({
+    required this.onAdd,
+    required this.onImport,
+    required this.onPickQrImage,
+    required this.onScanQr,
+  });
 
   final VoidCallback onAdd;
   final VoidCallback onImport;
+  final VoidCallback onPickQrImage;
+  final VoidCallback? onScanQr;
 
   @override
   Widget build(BuildContext context) {
@@ -679,6 +848,17 @@ class _EmptyState extends StatelessWidget {
                       icon: const Icon(Icons.content_paste_go, size: 18),
                       label: const Text('从剪贴板导入'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: onPickQrImage,
+                      icon: const Icon(Icons.photo_library_outlined, size: 18),
+                      label: const Text('从相册选择'),
+                    ),
+                    if (onScanQr != null)
+                      OutlinedButton.icon(
+                        onPressed: onScanQr,
+                        icon: const Icon(Icons.qr_code_scanner, size: 18),
+                        label: const Text('扫描二维码'),
+                      ),
                   ],
                 ),
               ],
@@ -696,6 +876,7 @@ class _InstanceCard extends StatelessWidget {
     required this.onOpen,
     required this.onEdit,
     required this.onExport,
+    required this.onExportQr,
     required this.onDelete,
   });
 
@@ -703,6 +884,7 @@ class _InstanceCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onExport;
+  final VoidCallback onExportQr;
   final VoidCallback onDelete;
 
   @override
@@ -760,6 +942,7 @@ class _InstanceCard extends StatelessWidget {
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
                   if (value == 'export') onExport();
+                  if (value == 'exportQr') onExportQr();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (context) => [
@@ -780,6 +963,16 @@ class _InstanceCard extends StatelessWidget {
                         Icon(Icons.content_copy, size: 18),
                         SizedBox(width: 8),
                         Text('导出到剪贴板'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'exportQr',
+                    child: Row(
+                      children: [
+                        Icon(Icons.qr_code_2, size: 18),
+                        SizedBox(width: 8),
+                        Text('导出为二维码'),
                       ],
                     ),
                   ),

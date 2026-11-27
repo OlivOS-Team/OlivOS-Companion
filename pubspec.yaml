@@ -51,6 +51,13 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   uuid: ^4.6.0
   url_launcher: ^6.3.3
+  qr: ^4.0.1
+  mobile_scanner: ^7.5.0
+  image_picker: ^1.2.4
+  zxing2: ^0.2.4
+  image: ^4.13.1
+  file_selector: ^1.1.0
+  gal: ^3.0.1
 
 dev_dependencies:
   flutter_test:
