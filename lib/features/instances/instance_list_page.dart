@@ -7,6 +7,7 @@ import '../../data/config_transfer.dart';
 import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
 import '../../state/theme_mode_provider.dart';
+import '../about/about_dialog.dart';
 import '../webview/instance_webview_page.dart';
 
 class InstanceListPage extends ConsumerWidget {
@@ -53,16 +54,37 @@ class InstanceListPage extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
+            onPressed: () => ref
+                .read(themeModeProvider.notifier)
+                .toggle(Theme.of(context).brightness),
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
-              onPressed: () => ref
-                  .read(themeModeProvider.notifier)
-                  .toggle(Theme.of(context).brightness),
-              icon: Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              ),
+            child: PopupMenuButton<String>(
+              tooltip: '更多',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'about') {
+                  showOlivOSCompanionAboutDialog(context);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'about',
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18),
+                      SizedBox(width: 8),
+                      Text('关于'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
