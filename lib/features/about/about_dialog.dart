@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 Future<void> showOlivOSCompanionAboutDialog(BuildContext context) {
   return showDialog<void>(
@@ -48,6 +49,8 @@ class _AboutDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('OlivOS 多实例客户端', style: textTheme.titleSmall),
+            const SizedBox(height: 6),
+            const _VersionText(),
             const SizedBox(height: 8),
             Text('Witness Union / 见证联合 ', style: textTheme.bodyMedium),
             sectionTitle('归属'),
@@ -86,6 +89,35 @@ class _AboutDialog extends StatelessWidget {
           child: const Text('关闭'),
         ),
       ],
+    );
+  }
+}
+
+class _VersionText extends StatefulWidget {
+  const _VersionText();
+
+  @override
+  State<_VersionText> createState() => _VersionTextState();
+}
+
+class _VersionTextState extends State<_VersionText> {
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    return FutureBuilder<PackageInfo>(
+      future: _packageInfo,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return const SizedBox.shrink();
+        final info = snapshot.data;
+        if (info == null) return Text('版本 …', style: style);
+        final buildNumber = info.buildNumber.trim();
+        final version = buildNumber.isEmpty
+            ? info.version
+            : '${info.version}+$buildNumber';
+        return Text('版本 $version', style: style);
+      },
     );
   }
 }

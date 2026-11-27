@@ -58,6 +58,7 @@ dependencies:
   image: ^4.13.1
   file_selector: ^1.1.0
   gal: ^3.0.1
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
