@@ -14,9 +14,9 @@
 
 [Setup]
 AppId={{06B11BD9-A802-4A8E-A132-301CBB39DDF1}
-AppName={#MyAppName}
+AppName={cm:MyAppName}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={cm:MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
@@ -27,7 +27,7 @@ VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} installer
 VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}
-DefaultGroupName={#MyAppName}
+DefaultGroupName={cm:MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\..\dist
 OutputBaseFilename=olivos-companion-windows-setup-x64
@@ -44,10 +44,17 @@ CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes
 ShowLanguageDialog=yes
+LanguageDetectionMethod=uilanguage
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "..\..\LICENSE"
 Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"; LicenseFile: "license\AGPL-3.0-zh-CN.txt"
+
+[CustomMessages]
+english.MyAppName=OlivOS Companion
+chinesesimplified.MyAppName=OlivOS 托盘
+english.LaunchApp=Launch OlivOS Companion
+chinesesimplified.LaunchApp=启动 OlivOS 托盘
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -57,12 +64,12 @@ Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ign
 Source: "redist\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{cm:MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Microsoft Visual C++ 2015-2022 Redistributable (x64)..."; Flags: waituntilterminated; Check: NeedsVCRedist
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function NeedsVCRedist: Boolean;

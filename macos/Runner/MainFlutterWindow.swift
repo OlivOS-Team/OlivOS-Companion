@@ -40,10 +40,17 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
 
+    let info = Bundle.main.localizedInfoDictionary ?? Bundle.main.infoDictionary
+    let appName =
+      (info?["CFBundleDisplayName"] as? String)
+      ?? (info?["CFBundleName"] as? String)
+      ?? "OlivOS Companion"
+    var title = appName
     if let version = Bundle.main.object(
       forInfoDictionaryKey: "CFBundleShortVersionString"
     ) as? String, !version.isEmpty {
-      self.title = "OlivOS Companion v\(version)"
+      title += " v\(version)"
     }
+    self.title = title
   }
 }

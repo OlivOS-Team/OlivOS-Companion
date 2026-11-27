@@ -54,7 +54,7 @@ class _AboutDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('OlivOS 多实例客户端', style: textTheme.titleSmall),
+            Text('OlivOS 多实例托盘 客户端', style: textTheme.titleSmall),
             const SizedBox(height: 6),
             const _VersionText(),
             const SizedBox(height: 8),

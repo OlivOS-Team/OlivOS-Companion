@@ -11,6 +11,7 @@ OlivOS 多实例 WebUI 客户端。
   - 启动时可选择简体中文或 English；两种语言显示对应语言的 AGPLv3 文本。
 - **Windows 便携版**：`olivos-companion-windows-portable-x64.zip`
   - 解压即可运行，不写入安装目录；目标机器仍需 VC++ 2015-2022 x64 和 WebView2 Runtime。
+- 安装器、窗口标题和桌面/应用列表名称会跟随系统语言：中文显示为「OlivOS 托盘」，英文显示为「OlivOS Companion」。
 - Android、macOS、iOS 产物见 Releases 页面。
 - Android 覆盖升级要求 APK 使用同一签名。历史测试包使用 CI 临时 debug 签名，
   如果提示“与已安装应用签名不同”，需要先卸载旧版一次；启用固定 release 签名后，

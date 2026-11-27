@@ -7,6 +7,14 @@
 #include "flutter_window.h"
 #include "utils.h"
 
+namespace {
+
+bool UsesChineseUi() {
+  return PRIMARYLANGID(::GetUserDefaultUILanguage()) == LANG_CHINESE;
+}
+
+}  // namespace
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // Attach to console when present (e.g., 'flutter run') or create a
@@ -26,7 +34,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  std::wstring window_title = L"OlivOS Companion";
+  std::wstring window_title = UsesChineseUi() ? L"OlivOS \u6258\u76d8"
+                                              : L"OlivOS Companion";
 #ifdef FLUTTER_VERSION
   std::string version = FLUTTER_VERSION;
   const auto build_metadata = version.find('+');
