@@ -800,61 +800,16 @@ class _SectionHeader extends StatelessWidget {
             borderColor: scheme.error.withValues(alpha: 0.35),
           )
         else
-          _SplitMenuButton(
+          _ImportSplitMenuButton(
             primary: true,
             label: '添加',
             icon: Icons.add,
             tooltip: '添加选项',
             onPressed: onAdd,
-            onSelected: (value) {
-              if (value == 'add') onAdd();
-              if (value == 'import') onImport();
-              if (value == 'pickQr') onPickQrImage();
-              if (value == 'scan') onScanQr?.call();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'add',
-                child: Row(
-                  children: [
-                    Icon(Icons.add, size: 18),
-                    SizedBox(width: 8),
-                    Text('手动添加'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'import',
-                child: Row(
-                  children: [
-                    Icon(Icons.content_paste_go, size: 18),
-                    SizedBox(width: 8),
-                    Text('从剪贴板导入'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'pickQr',
-                child: Row(
-                  children: [
-                    Icon(Icons.photo_library_outlined, size: 18),
-                    SizedBox(width: 8),
-                    Text('从相册选择'),
-                  ],
-                ),
-              ),
-              if (onScanQr != null)
-                const PopupMenuItem(
-                  value: 'scan',
-                  child: Row(
-                    children: [
-                      Icon(Icons.qr_code_scanner, size: 18),
-                      SizedBox(width: 8),
-                      Text('扫描二维码'),
-                    ],
-                  ),
-                ),
-            ],
+            onAdd: onAdd,
+            onImport: onImport,
+            onPickQrImage: onPickQrImage,
+            onScanQr: onScanQr,
           ),
       ],
     );
@@ -912,6 +867,96 @@ class _ToolbarButton extends StatelessWidget {
   }
 }
 
+class _ImportSplitMenuButton extends StatelessWidget {
+  const _ImportSplitMenuButton({
+    required this.label,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    required this.onAdd,
+    required this.onImport,
+    required this.onPickQrImage,
+    required this.onScanQr,
+    this.primary = false,
+    this.showLabel = false,
+    this.includeManualAdd = true,
+  });
+
+  final String label;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final VoidCallback onAdd;
+  final VoidCallback onImport;
+  final VoidCallback onPickQrImage;
+  final VoidCallback? onScanQr;
+  final bool primary;
+  final bool showLabel;
+  final bool includeManualAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SplitMenuButton(
+      primary: primary,
+      showLabel: showLabel,
+      label: label,
+      icon: icon,
+      tooltip: tooltip,
+      onPressed: onPressed,
+      onSelected: (value) {
+        if (value == 'add') onAdd();
+        if (value == 'import') onImport();
+        if (value == 'pickQr') onPickQrImage();
+        if (value == 'scan') onScanQr?.call();
+      },
+      itemBuilder: (context) => [
+        if (includeManualAdd)
+          const PopupMenuItem(
+            value: 'add',
+            child: Row(
+              children: [
+                Icon(Icons.add, size: 18),
+                SizedBox(width: 8),
+                Text('手动添加'),
+              ],
+            ),
+          ),
+        const PopupMenuItem(
+          value: 'import',
+          child: Row(
+            children: [
+              Icon(Icons.content_paste_go, size: 18),
+              SizedBox(width: 8),
+              Text('从剪贴板导入'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'pickQr',
+          child: Row(
+            children: [
+              Icon(Icons.photo_library_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('从相册选择'),
+            ],
+          ),
+        ),
+        if (onScanQr != null)
+          const PopupMenuItem(
+            value: 'scan',
+            child: Row(
+              children: [
+                Icon(Icons.qr_code_scanner, size: 18),
+                SizedBox(width: 8),
+                Text('扫描二维码'),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _SplitMenuButton extends StatelessWidget {
   const _SplitMenuButton({
     required this.label,
@@ -922,6 +967,7 @@ class _SplitMenuButton extends StatelessWidget {
     required this.itemBuilder,
     this.primary = false,
     this.enabled = true,
+    this.showLabel = false,
   });
 
   final String label;
@@ -932,6 +978,7 @@ class _SplitMenuButton extends StatelessWidget {
   final List<PopupMenuEntry<String>> Function(BuildContext) itemBuilder;
   final bool primary;
   final bool enabled;
+  final bool showLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -973,11 +1020,24 @@ class _SplitMenuButton extends StatelessWidget {
             child: InkWell(
               onTap: enabled ? onPressed : null,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                child: Icon(icon, size: 18, color: foreground),
+                padding: showLabel
+                    ? const EdgeInsets.fromLTRB(12, 8, 10, 8)
+                    : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: showLabel
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon, size: 18, color: foreground),
+                          const SizedBox(width: 6),
+                          Text(
+                            label,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: foreground,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Icon(icon, size: 18, color: foreground),
               ),
             ),
           ),
@@ -1059,22 +1119,18 @@ class _EmptyState extends StatelessWidget {
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('添加实例'),
                     ),
-                    OutlinedButton.icon(
+                    _ImportSplitMenuButton(
+                      showLabel: true,
+                      includeManualAdd: false,
+                      label: '从剪贴板导入',
+                      icon: Icons.content_paste_go,
+                      tooltip: '导入选项',
                       onPressed: onImport,
-                      icon: const Icon(Icons.content_paste_go, size: 18),
-                      label: const Text('从剪贴板导入'),
+                      onAdd: onAdd,
+                      onImport: onImport,
+                      onPickQrImage: onPickQrImage,
+                      onScanQr: onScanQr,
                     ),
-                    OutlinedButton.icon(
-                      onPressed: onPickQrImage,
-                      icon: const Icon(Icons.photo_library_outlined, size: 18),
-                      label: const Text('从相册选择'),
-                    ),
-                    if (onScanQr != null)
-                      OutlinedButton.icon(
-                        onPressed: onScanQr,
-                        icon: const Icon(Icons.qr_code_scanner, size: 18),
-                        label: const Text('扫描二维码'),
-                      ),
                   ],
                 ),
               ],
