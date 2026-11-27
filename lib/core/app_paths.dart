@@ -1,8 +1,32 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+
+/// Injectable platform information for [AppPaths].
+class AppPathsEnvironment {
+  const AppPathsEnvironment({
+    required this.isWindows,
+    required this.resolvedExecutable,
+    required this.environment,
+    required this.pathProvider,
+  });
+
+  factory AppPathsEnvironment.system() {
+    return AppPathsEnvironment(
+      isWindows: Platform.isWindows,
+      resolvedExecutable: Platform.resolvedExecutable,
+      environment: Platform.environment,
+      pathProvider: PathProviderPlatform.instance,
+    );
+  }
+
+  final bool isWindows;
+  final String resolvedExecutable;
+  final Map<String, String> environment;
+  final PathProviderPlatform pathProvider;
+}
 
 /// Resolves the data directories for the current installation mode.
 ///
@@ -18,16 +42,20 @@ class AppPaths {
   static Directory? _dataDirectory;
   static bool _portable = false;
   static bool _initialized = false;
+  static AppPathsEnvironment? _environment;
 
   static bool get isPortable => _portable;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({AppPathsEnvironment? environment}) async {
     if (_initialized) return;
+    final currentEnvironment = environment ?? AppPathsEnvironment.system();
+    _environment = currentEnvironment;
     _initialized = true;
 
-    final executableDirectory = File(Platform.resolvedExecutable).parent;
+    final executableDirectory = File(currentEnvironment.resolvedExecutable)
+        .parent;
     _portable =
-        Platform.isWindows &&
+        currentEnvironment.isWindows &&
         File(p.join(executableDirectory.path, portableMarkerName)).existsSync();
 
     if (_portable) {
@@ -40,15 +68,19 @@ class AppPaths {
       // flutter_secure_storage resolves its DPAPI file through path_provider.
       // Redirect that lookup to the portable data directory before the first
       // secure-storage access.
-      final fallback = PathProviderPlatform.instance;
       PathProviderPlatform.instance = _PortablePathProvider(
-        fallback,
+        currentEnvironment.pathProvider,
         dataDirectory.path,
       );
       return;
     }
 
-    final dataDirectory = await getApplicationSupportDirectory();
+    final supportPath = await currentEnvironment.pathProvider
+        .getApplicationSupportPath();
+    if (supportPath == null) {
+      throw StateError('Application support directory is unavailable');
+    }
+    final dataDirectory = Directory(supportPath);
     await dataDirectory.create(recursive: true);
     _dataDirectory = dataDirectory;
   }
@@ -59,7 +91,8 @@ class AppPaths {
   }
 
   static Future<Directory?> webView2Directory() async {
-    if (!Platform.isWindows) return null;
+    final environment = _environment ?? AppPathsEnvironment.system();
+    if (!environment.isWindows) return null;
 
     if (_portable) {
       return Directory(p.join((await dataDirectory()).path, 'WebView2'));
@@ -68,11 +101,19 @@ class AppPaths {
     // WebView2 must not use the read-only install directory for an installed
     // app. Keep its profile in LocalAppData instead of the roaming app data
     // used for settings and credentials.
-    final localAppData = Platform.environment['LOCALAPPDATA'];
+    final localAppData = environment.environment['LOCALAPPDATA'];
     final baseDirectory = localAppData != null && localAppData.isNotEmpty
         ? Directory(p.join(localAppData, _companyName, _productName))
         : await dataDirectory();
     return Directory(p.join(baseDirectory.path, 'WebView2'));
+  }
+
+  @visibleForTesting
+  static void resetForTesting() {
+    _dataDirectory = null;
+    _portable = false;
+    _initialized = false;
+    _environment = null;
   }
 }
 
