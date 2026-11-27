@@ -19,11 +19,19 @@ bool get _supportsQrScanning =>
     defaultTargetPlatform == TargetPlatform.android ||
     defaultTargetPlatform == TargetPlatform.iOS;
 
-class InstanceListPage extends ConsumerWidget {
+class InstanceListPage extends ConsumerStatefulWidget {
   const InstanceListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InstanceListPage> createState() => _InstanceListPageState();
+}
+
+class _InstanceListPageState extends ConsumerState<InstanceListPage> {
+  bool _batchMode = false;
+  final Set<String> _selectedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
     final instances = ref.watch(instancesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
@@ -103,6 +111,11 @@ class InstanceListPage extends ConsumerWidget {
         error: (error, _) => _PageMessage(message: '读取实例失败：$error'),
         data: (items) => _InstanceListBody(
           items: items,
+          batchMode: _batchMode,
+          selectedIds: _selectedIds,
+          onToggleBatchMode: _toggleBatchMode,
+          onToggleSelected: _toggleSelected,
+          onDeleteSelected: () => _deleteSelected(context, ref),
           onAdd: () => _showAddDialog(context),
           onImport: () => _importFromClipboard(context, ref),
           onPickQrImage: () => _importQrFromGallery(context, ref),
@@ -117,6 +130,77 @@ class InstanceListPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _toggleBatchMode() {
+    setState(() {
+      _batchMode = !_batchMode;
+      if (!_batchMode) _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelected(String id) {
+    setState(() {
+      if (!_selectedIds.add(id)) _selectedIds.remove(id);
+    });
+  }
+
+  List<InstanceProfile> _selectedProfiles(WidgetRef ref) {
+    final profiles = ref.read(instancesProvider).value ?? const [];
+    return profiles
+        .where((profile) => _selectedIds.contains(profile.id))
+        .toList();
+  }
+
+  Future<void> _deleteSelected(BuildContext context, WidgetRef ref) async {
+    final profiles = _selectedProfiles(ref);
+    if (profiles.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请先选择要删除的实例')));
+      return;
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除选中实例'),
+        content: Text('确定删除选中的 ${profiles.length} 个实例及其本地登录信息吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.errorContainer,
+              foregroundColor: scheme.error,
+              side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(instancesProvider.notifier)
+          .removeProfiles(profiles.map((profile) => profile.id));
+      if (!context.mounted) return;
+      setState(() {
+        _selectedIds.clear();
+        _batchMode = false;
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('已删除 ${profiles.length} 个实例')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('删除失败：$error')));
+    }
   }
 
   Future<List<InstanceConfigEntry>> _configEntries(
@@ -158,17 +242,26 @@ class InstanceListPage extends ConsumerWidget {
   }
 
   Future<void> _exportAll(BuildContext context, WidgetRef ref) async {
-    final profiles = ref.read(instancesProvider).value ?? const [];
+    final profiles = _batchMode
+        ? _selectedProfiles(ref)
+        : ref.read(instancesProvider).value ?? const [];
     if (profiles.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('没有可导出的实例')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_batchMode ? '请先选择要导出的实例' : '没有可导出的实例')),
+      );
       return;
     }
 
     try {
       final entries = await _configEntries(ref, profiles);
       if (!context.mounted) return;
-      await _copyConfig(context, entries, '已导出 ${entries.length} 个实例到剪贴板');
+      await _copyConfig(
+        context,
+        entries,
+        _batchMode
+            ? '已导出选中的 ${entries.length} 个实例到剪贴板'
+            : '已导出 ${entries.length} 个实例到剪贴板',
+      );
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
@@ -193,10 +286,13 @@ class InstanceListPage extends ConsumerWidget {
   }
 
   Future<void> _exportAllQr(BuildContext context, WidgetRef ref) async {
-    final profiles = ref.read(instancesProvider).value ?? const [];
+    final profiles = _batchMode
+        ? _selectedProfiles(ref)
+        : ref.read(instancesProvider).value ?? const [];
     if (profiles.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('没有可导出的实例')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_batchMode ? '请先选择要导出的实例' : '没有可导出的实例')),
+      );
       return;
     }
 
@@ -206,7 +302,9 @@ class InstanceListPage extends ConsumerWidget {
       await showConfigQrDialog(
         context,
         data: ConfigTransfer.encode(entries),
-        description: '全部实例（${entries.length} 个）',
+        description: _batchMode
+            ? '选中的实例（${entries.length} 个）'
+            : '全部实例（${entries.length} 个）',
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -428,6 +526,11 @@ class InstanceListPage extends ConsumerWidget {
 class _InstanceListBody extends StatefulWidget {
   const _InstanceListBody({
     required this.items,
+    required this.batchMode,
+    required this.selectedIds,
+    required this.onToggleBatchMode,
+    required this.onToggleSelected,
+    required this.onDeleteSelected,
     required this.onAdd,
     required this.onImport,
     required this.onPickQrImage,
@@ -442,6 +545,11 @@ class _InstanceListBody extends StatefulWidget {
   });
 
   final List<InstanceProfile> items;
+  final bool batchMode;
+  final Set<String> selectedIds;
+  final VoidCallback onToggleBatchMode;
+  final ValueChanged<String> onToggleSelected;
+  final VoidCallback onDeleteSelected;
   final VoidCallback onAdd;
   final VoidCallback onImport;
   final VoidCallback onPickQrImage;
@@ -479,6 +587,9 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
   @override
   Widget build(BuildContext context) {
     final fadeColor = Theme.of(context).scaffoldBackgroundColor;
+    final selectedCount = widget.items
+        .where((profile) => widget.selectedIds.contains(profile.id))
+        .length;
     return SafeArea(
       top: false,
       child: Column(
@@ -487,6 +598,10 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
             child: _SectionHeader(
               count: widget.items.length,
+              batchMode: widget.batchMode,
+              selectedCount: selectedCount,
+              onToggleBatchMode: widget.onToggleBatchMode,
+              onDeleteSelected: widget.onDeleteSelected,
               onAdd: widget.onAdd,
               onImport: widget.onImport,
               onPickQrImage: widget.onPickQrImage,
@@ -532,6 +647,12 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
                                   ),
                                   child: _InstanceCard(
                                     profile: profile,
+                                    batchMode: widget.batchMode,
+                                    selected: widget.selectedIds.contains(
+                                      profile.id,
+                                    ),
+                                    onToggleSelected: () =>
+                                        widget.onToggleSelected(profile.id),
                                     onOpen: () => widget.onOpen(profile),
                                     onEdit: () => widget.onEdit(profile),
                                     onExport: () => widget.onExport(profile),
@@ -577,6 +698,10 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.count,
+    required this.batchMode,
+    required this.selectedCount,
+    required this.onToggleBatchMode,
+    required this.onDeleteSelected,
     required this.onAdd,
     required this.onImport,
     required this.onPickQrImage,
@@ -586,6 +711,10 @@ class _SectionHeader extends StatelessWidget {
   });
 
   final int count;
+  final bool batchMode;
+  final int selectedCount;
+  final VoidCallback onToggleBatchMode;
+  final VoidCallback onDeleteSelected;
   final VoidCallback onAdd;
   final VoidCallback onImport;
   final VoidCallback onPickQrImage;
@@ -595,23 +724,39 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('实例', style: textTheme.titleMedium),
-              const SizedBox(height: 2),
               Text(
-                count == 0 ? '尚未添加实例' : '$count 个实例',
-                style: textTheme.bodySmall,
+                batchMode
+                    ? '已选择 $selectedCount 个'
+                    : (count == 0 ? '尚未添加实例' : '$count 个实例'),
+                style: textTheme.titleMedium,
               ),
+              const SizedBox(height: 2),
+              Text(batchMode ? '批量模式' : '实例', style: textTheme.bodySmall),
             ],
           ),
         ),
+        if (count > 0 || batchMode) ...[
+          _ToolbarButton(
+            tooltip: batchMode ? '退出批量模式' : '批量选择',
+            icon: batchMode ? Icons.close : Icons.checklist,
+            onPressed: onToggleBatchMode,
+            foreground: scheme.onSurface,
+            background: scheme.surfaceContainerHighest,
+            borderColor: scheme.outline,
+          ),
+          const SizedBox(width: 6),
+        ],
         _SplitMenuButton(
+          enabled: !batchMode || selectedCount > 0,
           label: '导出',
           icon: Icons.file_upload_outlined,
           tooltip: '导出选项',
@@ -644,63 +789,125 @@ class _SectionHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(width: 8),
-        _SplitMenuButton(
-          primary: true,
-          label: '添加',
-          icon: Icons.add,
-          tooltip: '添加选项',
-          onPressed: onAdd,
-          onSelected: (value) {
-            if (value == 'add') onAdd();
-            if (value == 'import') onImport();
-            if (value == 'pickQr') onPickQrImage();
-            if (value == 'scan') onScanQr?.call();
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'add',
-              child: Row(
-                children: [
-                  Icon(Icons.add, size: 18),
-                  SizedBox(width: 8),
-                  Text('手动添加'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'import',
-              child: Row(
-                children: [
-                  Icon(Icons.content_paste_go, size: 18),
-                  SizedBox(width: 8),
-                  Text('从剪贴板导入'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'pickQr',
-              child: Row(
-                children: [
-                  Icon(Icons.photo_library_outlined, size: 18),
-                  SizedBox(width: 8),
-                  Text('从相册选择'),
-                ],
-              ),
-            ),
-            if (onScanQr != null)
+        if (batchMode)
+          _ToolbarButton(
+            tooltip: '删除选中的实例',
+            icon: Icons.delete_outline,
+            enabled: selectedCount > 0,
+            onPressed: onDeleteSelected,
+            foreground: scheme.error,
+            background: scheme.errorContainer,
+            borderColor: scheme.error.withValues(alpha: 0.35),
+          )
+        else
+          _SplitMenuButton(
+            primary: true,
+            label: '添加',
+            icon: Icons.add,
+            tooltip: '添加选项',
+            onPressed: onAdd,
+            onSelected: (value) {
+              if (value == 'add') onAdd();
+              if (value == 'import') onImport();
+              if (value == 'pickQr') onPickQrImage();
+              if (value == 'scan') onScanQr?.call();
+            },
+            itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'scan',
+                value: 'add',
                 child: Row(
                   children: [
-                    Icon(Icons.qr_code_scanner, size: 18),
+                    Icon(Icons.add, size: 18),
                     SizedBox(width: 8),
-                    Text('扫描二维码'),
+                    Text('手动添加'),
                   ],
                 ),
               ),
-          ],
-        ),
+              const PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    Icon(Icons.content_paste_go, size: 18),
+                    SizedBox(width: 8),
+                    Text('从剪贴板导入'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'pickQr',
+                child: Row(
+                  children: [
+                    Icon(Icons.photo_library_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('从相册选择'),
+                  ],
+                ),
+              ),
+              if (onScanQr != null)
+                const PopupMenuItem(
+                  value: 'scan',
+                  child: Row(
+                    children: [
+                      Icon(Icons.qr_code_scanner, size: 18),
+                      SizedBox(width: 8),
+                      Text('扫描二维码'),
+                    ],
+                  ),
+                ),
+            ],
+          ),
       ],
+    );
+  }
+}
+
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    required this.foreground,
+    required this.background,
+    required this.borderColor,
+    this.enabled = true,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color foreground;
+  final Color background;
+  final Color borderColor;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveForeground = enabled
+        ? foreground
+        : foreground.withValues(alpha: 0.38);
+    final effectiveBackground = enabled
+        ? background
+        : background.withValues(alpha: 0.5);
+    final effectiveBorder = enabled
+        ? borderColor
+        : borderColor.withValues(alpha: 0.5);
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: effectiveBackground,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: effectiveBorder),
+        ),
+        child: InkWell(
+          onTap: enabled ? onPressed : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Icon(icon, size: 18, color: effectiveForeground),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -714,6 +921,7 @@ class _SplitMenuButton extends StatelessWidget {
     required this.onSelected,
     required this.itemBuilder,
     this.primary = false,
+    this.enabled = true,
   });
 
   final String label;
@@ -723,17 +931,30 @@ class _SplitMenuButton extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final List<PopupMenuEntry<String>> Function(BuildContext) itemBuilder;
   final bool primary;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final foreground = primary ? scheme.onPrimary : scheme.onSurface;
-    final background = primary
+    final foreground = !enabled
+        ? scheme.onSurface.withValues(alpha: 0.38)
+        : primary
+        ? scheme.onPrimary
+        : scheme.onSurface;
+    final background = !enabled
+        ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+        : primary
         ? scheme.primary
         : scheme.surfaceContainerHighest;
-    final borderColor = primary ? scheme.primary : scheme.outline;
-    final dividerColor = primary
+    final borderColor = !enabled
+        ? scheme.outline.withValues(alpha: 0.5)
+        : primary
+        ? scheme.primary
+        : scheme.outline;
+    final dividerColor = !enabled
+        ? scheme.outline.withValues(alpha: 0.5)
+        : primary
         ? scheme.onPrimary.withValues(alpha: 0.35)
         : scheme.outline;
 
@@ -750,7 +971,7 @@ class _SplitMenuButton extends StatelessWidget {
           Tooltip(
             message: label,
             child: InkWell(
-              onTap: onPressed,
+              onTap: enabled ? onPressed : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -763,6 +984,7 @@ class _SplitMenuButton extends StatelessWidget {
           Container(width: 1, height: 18, color: dividerColor),
           PopupMenuButton<String>(
             tooltip: tooltip,
+            enabled: enabled,
             onSelected: onSelected,
             itemBuilder: itemBuilder,
             child: Padding(
@@ -867,6 +1089,9 @@ class _EmptyState extends StatelessWidget {
 class _InstanceCard extends StatelessWidget {
   const _InstanceCard({
     required this.profile,
+    required this.batchMode,
+    required this.selected,
+    required this.onToggleSelected,
     required this.onOpen,
     required this.onEdit,
     required this.onExport,
@@ -875,6 +1100,9 @@ class _InstanceCard extends StatelessWidget {
   });
 
   final InstanceProfile profile;
+  final bool batchMode;
+  final bool selected;
+  final VoidCallback onToggleSelected;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onExport;
@@ -931,8 +1159,15 @@ class _InstanceCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      color: selected ? scheme.primaryContainer.withValues(alpha: 0.75) : null,
+      shape: selected
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+              side: BorderSide(color: scheme.primary),
+            )
+          : null,
       child: InkWell(
-        onTap: onOpen,
+        onTap: batchMode ? onToggleSelected : onOpen,
         hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -976,61 +1211,64 @@ class _InstanceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              MenuAnchor(
-                style: menuStyle,
-                // Match PopupMenuButton: right-align the menu with the button.
-                alignmentOffset: const Offset(anchorWidth - menuWidth, 0),
-                animated: true,
-                menuChildren: [
-                  MenuItemButton(
-                    style: itemStyle,
-                    onPressed: onEdit,
-                    child: itemRow(Icons.edit_outlined, '编辑'),
-                  ),
-                  SubmenuButton(
-                    style: itemStyle,
-                    menuStyle: submenuStyle,
-                    animated: true,
-                    submenuIcon: const WidgetStatePropertyAll<Widget?>(
-                      Icon(Icons.chevron_right, size: 18),
+              if (batchMode)
+                Checkbox(value: selected, onChanged: (_) => onToggleSelected())
+              else
+                MenuAnchor(
+                  style: menuStyle,
+                  // Match PopupMenuButton: right-align the menu with the button.
+                  alignmentOffset: const Offset(anchorWidth - menuWidth, 0),
+                  animated: true,
+                  menuChildren: [
+                    MenuItemButton(
+                      style: itemStyle,
+                      onPressed: onEdit,
+                      child: itemRow(Icons.edit_outlined, '编辑'),
                     ),
-                    menuChildren: [
-                      MenuItemButton(
-                        style: itemStyle,
-                        onPressed: onExport,
-                        child: itemRow(Icons.content_copy, '导出到剪贴板'),
+                    SubmenuButton(
+                      style: itemStyle,
+                      menuStyle: submenuStyle,
+                      animated: true,
+                      submenuIcon: const WidgetStatePropertyAll<Widget?>(
+                        Icon(Icons.chevron_right, size: 18),
                       ),
-                      MenuItemButton(
-                        style: itemStyle,
-                        onPressed: onExportQr,
-                        child: itemRow(Icons.qr_code_2, '导出为二维码'),
-                      ),
-                    ],
-                    child: itemRow(Icons.file_upload_outlined, '导出'),
-                  ),
-                  const Divider(height: 1),
-                  MenuItemButton(
-                    style: itemStyle,
-                    onPressed: onDelete,
-                    child: itemRow(
-                      Icons.delete_outline,
-                      '删除',
-                      color: scheme.error,
+                      menuChildren: [
+                        MenuItemButton(
+                          style: itemStyle,
+                          onPressed: onExport,
+                          child: itemRow(Icons.content_copy, '导出到剪贴板'),
+                        ),
+                        MenuItemButton(
+                          style: itemStyle,
+                          onPressed: onExportQr,
+                          child: itemRow(Icons.qr_code_2, '导出为二维码'),
+                        ),
+                      ],
+                      child: itemRow(Icons.file_upload_outlined, '导出'),
                     ),
+                    const Divider(height: 1),
+                    MenuItemButton(
+                      style: itemStyle,
+                      onPressed: onDelete,
+                      child: itemRow(
+                        Icons.delete_outline,
+                        '删除',
+                        color: scheme.error,
+                      ),
+                    ),
+                  ],
+                  builder: (context, controller, child) => IconButton(
+                    tooltip: '更多操作',
+                    onPressed: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                      } else {
+                        controller.open();
+                      }
+                    },
+                    icon: const Icon(Icons.more_vert),
                   ),
-                ],
-                builder: (context, controller, child) => IconButton(
-                  tooltip: '更多操作',
-                  onPressed: () {
-                    if (controller.isOpen) {
-                      controller.close();
-                    } else {
-                      controller.open();
-                    }
-                  },
-                  icon: const Icon(Icons.more_vert),
                 ),
-              ),
             ],
           ),
         ),

@@ -114,12 +114,29 @@ class InstancesNotifier extends AsyncNotifier<List<InstanceProfile>> {
     return entries.length;
   }
 
-  Future<void> removeProfile(String id) async {
+  Future<void> removeProfile(String id) {
+    return removeProfiles([id]);
+  }
+
+  Future<void> removeProfiles(Iterable<String> ids) async {
+    final removedIds = ids.toSet();
+    if (removedIds.isEmpty) return;
+
     final store = ref.read(instanceStoreProvider);
     final current = state.value ?? await store.loadProfiles();
-    final updated = current.where((profile) => profile.id != id).toList();
+    final removed = current
+        .where((profile) => removedIds.contains(profile.id))
+        .map((profile) => profile.id)
+        .toList();
+    if (removed.isEmpty) return;
+
+    final updated = current
+        .where((profile) => !removedIds.contains(profile.id))
+        .toList();
     await store.saveProfiles(updated);
-    await store.deletePassword(id);
+    for (final id in removed) {
+      await store.deletePassword(id);
+    }
     state = AsyncData(updated);
   }
 }
