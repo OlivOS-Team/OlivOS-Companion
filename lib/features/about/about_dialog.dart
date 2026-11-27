@@ -1,5 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'component_licenses_page.dart';
+
+const _agplUrl = 'https://www.gnu.org/licenses/agpl-3.0.html';
+const _projectUrl = 'https://github.com/OlivOS-Team/OlivOS-Companion';
 
 Future<void> showOlivOSCompanionAboutDialog(BuildContext context) {
   return showDialog<void>(
@@ -61,15 +67,47 @@ class _AboutDialog extends StatelessWidget {
               style: textTheme.bodyMedium,
             ),
             sectionTitle('许可证'),
-            Text(
-              '本项目基于 GNU Affero General Public License v3.0'
-              '（AGPL-3.0）发布。',
-              style: textTheme.bodyMedium,
+            Text.rich(
+              TextSpan(
+                style: textTheme.bodyMedium,
+                children: [
+                  const TextSpan(
+                    text:
+                        '本项目基于 GNU Affero General Public '
+                        'License v3.0（',
+                  ),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: _InlineLink(
+                      key: const Key('about-agpl-link'),
+                      label: 'AGPL-3.0',
+                      uri: Uri.parse(_agplUrl),
+                    ),
+                  ),
+                  const TextSpan(text: '）发布。'),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
-            SelectableText(
-              'https://github.com/OlivOS-Team/OlivOS-Companion',
-              style: textTheme.bodySmall?.copyWith(color: colors.primary),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: const Key('about-project-link'),
+                onPressed: () => _openExternal(context, Uri.parse(_projectUrl)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: colors.primary,
+                ),
+                child: Text(
+                  _projectUrl,
+                  style: textTheme.bodySmall?.copyWith(
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             Text('世界是属于每一个人的。要创造一个充满逻辑并尊重每一个人的世界。', style: textTheme.bodySmall),
@@ -89,6 +127,46 @@ class _AboutDialog extends StatelessWidget {
           child: const Text('关闭'),
         ),
       ],
+    );
+  }
+}
+
+Future<void> _openExternal(BuildContext context, Uri uri) async {
+  try {
+    if (await canLaunchUrl(uri)) {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    }
+  } catch (_) {
+    // Fall through to the snackbar below.
+  }
+  if (!context.mounted) return;
+  ScaffoldMessenger.maybeOf(context)
+      ?.showSnackBar(SnackBar(content: Text('无法打开链接：$uri')));
+}
+
+class _InlineLink extends StatelessWidget {
+  const _InlineLink({super.key, required this.label, required this.uri});
+
+  final String label;
+  final Uri uri;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.primary,
+      decoration: TextDecoration.underline,
+    );
+    return Semantics(
+      link: true,
+      child: InkWell(
+        onTap: () => _openExternal(context, uri),
+        child: Text(label, style: style),
+      ),
     );
   }
 }
@@ -116,7 +194,36 @@ class _VersionTextState extends State<_VersionText> {
         final version = buildNumber.isEmpty
             ? info.version
             : '${info.version}+$buildNumber';
-        return Text('版本 $version', style: style);
+        final theme = Theme.of(context);
+        final linkStyle = style?.copyWith(
+          color: theme.colorScheme.primary,
+          decoration: TextDecoration.underline,
+        );
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Tooltip(
+            message: '查看组件版本与开源许可证',
+            child: TextButton(
+              key: const Key('about-version-button'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) =>
+                        ComponentLicensesPage(applicationVersion: version),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: theme.colorScheme.primary,
+                textStyle: linkStyle,
+              ),
+              child: Text('版本 $version'),
+            ),
+          ),
+        );
       },
     );
   }

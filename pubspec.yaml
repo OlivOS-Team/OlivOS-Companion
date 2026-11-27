@@ -59,6 +59,7 @@ dependencies:
   file_selector: ^1.1.0
   gal: ^3.0.1
   package_info_plus: ^10.2.2
+  yaml: ^3.1.4
 
 dev_dependencies:
   flutter_test:
@@ -83,6 +84,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/branding/olivos.png
+    - pubspec.lock
 
   # To add assets to your application, add an assets section, like this:
   # assets:
