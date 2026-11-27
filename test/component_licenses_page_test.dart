@@ -11,7 +11,7 @@ void main() {
       MaterialApp(
         theme: buildOlivOSTheme(Brightness.light),
         home: ComponentLicensesPage(
-          applicationVersion: '0.1.6+7',
+          applicationVersion: '0.2.0+8',
           versions: Future.value([
             const ComponentVersion(
               name: 'flutter_riverpod',
@@ -42,7 +42,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('组件与许可证'), findsOneWidget);
-    expect(find.text('OlivOS Companion 0.1.6+7'), findsOneWidget);
+    expect(find.text('OlivOS Companion 0.2.0+8'), findsOneWidget);
     expect(find.text('flutter_riverpod'), findsOneWidget);
     expect(find.text('版本 3.5.0'), findsOneWidget);
     expect(find.text('dev_tool'), findsOneWidget);
