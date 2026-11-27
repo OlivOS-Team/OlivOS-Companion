@@ -891,6 +891,50 @@ class _InstanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    const menuWidth = 160.0;
+    const anchorWidth = 48.0;
+    MenuStyle buildMenuStyle({AlignmentGeometry? alignment}) {
+      return MenuStyle(
+        alignment: alignment,
+        backgroundColor: WidgetStatePropertyAll(
+          theme.popupMenuTheme.color ?? scheme.surface,
+        ),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        shadowColor: WidgetStatePropertyAll(
+          theme.popupMenuTheme.shadowColor ?? scheme.shadow,
+        ),
+        elevation: WidgetStatePropertyAll(theme.popupMenuTheme.elevation ?? 6),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: 8),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(color: scheme.outline),
+          ),
+        ),
+      );
+    }
+
+    final menuStyle = buildMenuStyle(alignment: AlignmentDirectional.topStart);
+    final submenuStyle = buildMenuStyle();
+    final itemStyle = MenuItemButton.styleFrom(
+      foregroundColor: scheme.onSurface,
+      textStyle: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurface),
+      minimumSize: const Size(menuWidth, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+    );
+
+    Widget itemRow(IconData icon, String label, {Color? color}) {
+      return Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(label, style: color == null ? null : TextStyle(color: color)),
+        ],
+      );
+    }
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -938,60 +982,60 @@ class _InstanceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') onEdit();
-                  if (value == 'export') onExport();
-                  if (value == 'exportQr') onExportQr();
-                  if (value == 'delete') onDelete();
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: 8),
-                        Text('编辑'),
-                      ],
-                    ),
+              MenuAnchor(
+                style: menuStyle,
+                // Match PopupMenuButton: right-align the menu with the button.
+                alignmentOffset: const Offset(anchorWidth - menuWidth, 0),
+                animated: true,
+                menuChildren: [
+                  MenuItemButton(
+                    style: itemStyle,
+                    onPressed: onEdit,
+                    child: itemRow(Icons.edit_outlined, '编辑'),
                   ),
-                  const PopupMenuItem(
-                    value: 'export',
-                    child: Row(
-                      children: [
-                        Icon(Icons.content_copy, size: 18),
-                        SizedBox(width: 8),
-                        Text('导出到剪贴板'),
-                      ],
+                  SubmenuButton(
+                    style: itemStyle,
+                    menuStyle: submenuStyle,
+                    animated: true,
+                    submenuIcon: const WidgetStatePropertyAll<Widget?>(
+                      Icon(Icons.chevron_right, size: 18),
                     ),
+                    menuChildren: [
+                      MenuItemButton(
+                        style: itemStyle,
+                        onPressed: onExport,
+                        child: itemRow(Icons.content_copy, '导出到剪贴板'),
+                      ),
+                      MenuItemButton(
+                        style: itemStyle,
+                        onPressed: onExportQr,
+                        child: itemRow(Icons.qr_code_2, '导出为二维码'),
+                      ),
+                    ],
+                    child: itemRow(Icons.file_upload_outlined, '导出'),
                   ),
-                  const PopupMenuItem(
-                    value: 'exportQr',
-                    child: Row(
-                      children: [
-                        Icon(Icons.qr_code_2, size: 18),
-                        SizedBox(width: 8),
-                        Text('导出为二维码'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: scheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Text('删除', style: TextStyle(color: scheme.error)),
-                      ],
+                  const Divider(height: 1),
+                  MenuItemButton(
+                    style: itemStyle,
+                    onPressed: onDelete,
+                    child: itemRow(
+                      Icons.delete_outline,
+                      '删除',
+                      color: scheme.error,
                     ),
                   ),
                 ],
+                builder: (context, controller, child) => IconButton(
+                  tooltip: '更多操作',
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                  },
+                  icon: const Icon(Icons.more_vert),
+                ),
               ),
             ],
           ),
