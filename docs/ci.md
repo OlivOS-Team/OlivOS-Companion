@@ -96,8 +96,8 @@ python3 tools/coverage/coverage_summary.py coverage/lcov.info \
 # 安装 Inno Setup 6，并把 VC++ 运行库放到 windows\installer\redist\
 # 名称必须是 vc_redist.x64.exe
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
-  /DMyAppVersion=0.1.5 `
-  /DMyAppVersionNumeric=0.1.5 `
+  /DMyAppVersion=0.1.6 `
+  /DMyAppVersionNumeric=0.1.6 `
   windows\installer\olivos-companion.iss
 ```
 
