@@ -124,6 +124,9 @@ gh run view <run-id> --log-failed
 
 ## Android 签名
 
+项目使用 AGP 9.3.3 或更高版本。AGP 9.3.0/9.3.1 的 lint 在 JDK 17 下会因
+`java.util.List.removeLast()` 崩溃（Google issue 522845800），不要降级到这两个版本。
+
 Android 要求覆盖安装的新 APK 与已安装版本使用同一签名证书。CI 必须使用固定的
 release keystore；如果继续使用 runner 每次临时生成的 debug keystore，不同构建的
 APK 签名不同，系统会报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`（安装失败 -7）。
