@@ -269,25 +269,41 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           path: release-artifacts
+      - name: Resolve release version
+        id: release_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          if [[ -z "$version" || "$version" == *"/"* ]]; then
+            echo "::error::Unsupported release tag: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Stage release assets
         shell: bash
         run: |
           set -euo pipefail
+          version="${{ steps.release_version.outputs.version }}"
           mkdir -p release-assets
 
           # Coverage is an Actions-only artifact; never let it reach the release.
           rm -rf release-artifacts/coverage
           test -f release-artifacts/windows-portable/portable.flag
-          cp release-artifacts/android/olivos-companion-android-release.apk release-assets/
-          cp release-artifacts/macos/olivos-companion-macos.zip release-assets/
-          cp release-artifacts/ios/olivos-companion-ios.zip release-assets/
-          cp release-artifacts/windows-installer/olivos-companion-windows-setup-x64.exe release-assets/
+          cp release-artifacts/android/olivos-companion-android-release.apk \
+            "release-assets/olivos-companion-${version}-android-release.apk"
+          cp release-artifacts/macos/olivos-companion-macos.zip \
+            "release-assets/olivos-companion-${version}-macos.zip"
+          cp release-artifacts/ios/olivos-companion-ios.zip \
+            "release-assets/olivos-companion-${version}-ios.zip"
+          cp release-artifacts/windows-installer/olivos-companion-windows-setup-x64.exe \
+            "release-assets/olivos-companion-${version}-windows-setup-x64.exe"
 
           # The portable artifact stays uncompressed in Actions; create the final
           # zip only here so the downloaded workflow artifact is not a zip-in-zip.
           (
             cd release-artifacts/windows-portable
-            zip -q -r "$GITHUB_WORKSPACE/release-assets/olivos-companion-windows-portable-x64.zip" .
+            zip -q -r "$GITHUB_WORKSPACE/release-assets/olivos-companion-${version}-windows-portable-x64.zip" .
           )
 
           # One checksum file per release asset; never bundle coverage reports here.
@@ -312,8 +328,8 @@ jobs:
           body: |
             ## Windows
 
-            - 安装版（推荐）：`olivos-companion-windows-setup-x64.exe`
-            - 便携版：`olivos-companion-windows-portable-x64.zip`
+            - 安装版（推荐）：`olivos-companion-${{ steps.release_version.outputs.version }}-windows-setup-x64.exe`
+            - 便携版：`olivos-companion-${{ steps.release_version.outputs.version }}-windows-portable-x64.zip`
 
             安装版会安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装
             Microsoft Visual C++ 2015-2022 x64 运行库。首次运行需要系统中的
@@ -321,6 +337,18 @@ jobs:
 
             便携版不会安装运行库，目标机器仍需 Microsoft Visual C++ 2015-2022
             x64 运行库和 WebView2 Runtime。
+
+            ## Android
+
+            - `olivos-companion-${{ steps.release_version.outputs.version }}-android-release.apk`
+
+            ## macOS
+
+            - `olivos-companion-${{ steps.release_version.outputs.version }}-macos.zip`
+
+            ## iOS
+
+            - `olivos-companion-${{ steps.release_version.outputs.version }}-ios.zip`
 
             ## 校验
 

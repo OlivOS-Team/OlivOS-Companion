@@ -41,14 +41,19 @@ GitHub Actions 下载 artifact 时仍会由平台统一包一层 zip；便携版
 
 ## Release assets
 
-tag 触发时，`release-draft` 只暂存以下发布文件，覆盖率报告不会作为 Release asset 上传：
+tag 触发时，`release-draft` 只暂存以下发布文件，覆盖率报告不会作为 Release asset 上传。
+Release asset 文件名包含版本号（tag 去掉 `v` 前缀），Actions artifact 仍保持固定文件名：
 
-- `olivos-companion-android-release.apk`
-- `olivos-companion-windows-portable-x64.zip`（在 Release 阶段由便携目录生成）
-- `olivos-companion-windows-setup-x64.exe`
-- `olivos-companion-macos.zip`
-- `olivos-companion-ios.zip`
+- `olivos-companion-<version>-android-release.apk`
+- `olivos-companion-<version>-windows-portable-x64.zip`（在 Release 阶段由便携目录生成）
+- `olivos-companion-<version>-windows-setup-x64.exe`
+- `olivos-companion-<version>-macos.zip`
+- `olivos-companion-<version>-ios.zip`
 - 每个文件对应的独立 `*.sha256` 校验文件，不再生成合并的 `SHA256SUMS`
+
+工作流创建的是 draft release，确认产物后再在 GitHub Release 页面手动点击 Publish release。
+GitHub Release asset 本身也可以在 Release 编辑页手动上传或替换；Actions artifact 则是
+workflow 内部产物，需要下载后手动上传到 Release，不能直接当作 Release asset 发布。
 
 ## 测试覆盖率
 

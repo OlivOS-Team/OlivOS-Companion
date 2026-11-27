@@ -53,11 +53,13 @@ OlivOS Companion 是一个跨平台的 OlivOS WebUI 客户端，用桌面或移�
 
 | 平台 | 产物 | 说明 |
 | --- | --- | --- |
-| Windows（推荐） | `olivos-companion-windows-setup-x64.exe` | 安装版，安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装 VC++ 运行库。 |
-| Windows | `olivos-companion-windows-portable-x64.zip` | 便携版，解压即用；目标机器仍需 VC++ 2015-2022 x64 和 WebView2 Runtime。 |
-| Android | `olivos-companion-android-release.apk` | 支持覆盖升级；签名说明见开发文档。 |
-| macOS | `olivos-companion-macos.zip` | 解压后运行 `.app`。 |
-| iOS | `olivos-companion-ios.zip` | 未签名构建，需要自行签名安装。 |
+| Windows（推荐） | `olivos-companion-<version>-windows-setup-x64.exe` | 安装版，安装到 `Program Files`，创建开始菜单快捷方式，并检测/安装 VC++ 运行库。 |
+| Windows | `olivos-companion-<version>-windows-portable-x64.zip` | 便携版，解压即用；目标机器仍需 VC++ 2015-2022 x64 和 WebView2 Runtime。 |
+| Android | `olivos-companion-<version>-android-release.apk` | 支持覆盖升级；签名说明见开发文档。 |
+| macOS | `olivos-companion-<version>-macos.zip` | 解压后运行 `.app`。 |
+| iOS | `olivos-companion-<version>-ios.zip` | 未签名构建，需要自行签名安装。 |
+
+- `<version>` 为 Release tag 去掉 `v` 前缀后的版本号，例如 `v0.2.0` 对应 `0.2.0`。
 
 - Windows 安装器支持简体中文和 English，并显示对应语言的 AGPLv3 文本。
 - 安装器、窗口标题和桌面/应用列表名称会跟随系统语言：中文显示为「OlivOS 托盘」，英文显示为「OlivOS Companion」。
