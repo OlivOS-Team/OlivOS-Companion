@@ -747,22 +747,16 @@ class _SplitMenuButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 18, color: foreground),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: foreground,
-                    ),
-                  ),
-                ],
+          Tooltip(
+            message: label,
+            child: InkWell(
+              onTap: onPressed,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Icon(icon, size: 18, color: foreground),
               ),
             ),
           ),
