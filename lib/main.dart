@@ -9,6 +9,7 @@ import 'core/app_paths.dart';
 import 'core/window_theme_service.dart';
 import 'data/settings_store.dart';
 import 'features/instances/instance_list_page.dart';
+import 'features/startup/launch_gate.dart';
 import 'state/theme_mode_provider.dart';
 
 Future<void> main() async {
@@ -42,7 +43,9 @@ class OlivOSCompanionApp extends ConsumerWidget {
       theme: buildOlivOSTheme(Brightness.light),
       darkTheme: buildOlivOSTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
-      home: const _TitleBarThemeSync(child: InstanceListPage()),
+      home: const _TitleBarThemeSync(
+        child: LaunchGate(child: InstanceListPage()),
+      ),
     );
   }
 }
