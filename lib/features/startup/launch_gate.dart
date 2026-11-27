@@ -138,11 +138,10 @@ class _OlivOSMarkPainter extends CustomPainter {
     final fit = targetWidth / olivosMarkBounds.width;
     final effectiveScale = fit * scale;
     final center = olivosMarkBounds.center;
-    final visibleRect = Rect.fromLTRB(
-      (0 - size.width / 2) / effectiveScale + center.dx,
-      (0 - size.height / 2) / effectiveScale + center.dy,
-      (size.width - size.width / 2) / effectiveScale + center.dx,
-      (size.height - size.height / 2) / effectiveScale + center.dy,
+    final visibleRect = Rect.fromCenter(
+      center: center,
+      width: size.width / effectiveScale,
+      height: size.height / effectiveScale,
     );
 
     canvas.save();
@@ -198,8 +197,8 @@ class _LineGeometry {
     this.startAt,
     this.duration,
     this.paths,
-    this.start,
-    this.end,
+    this.drawStart,
+    this.drawEnd,
     this.normal,
     this.halfWidth,
     this.screenEntryFrom,
@@ -210,19 +209,18 @@ class _LineGeometry {
   final double startAt;
   final double duration;
   final List<Path> paths;
-  final Offset start;
-  final Offset end;
+  final Offset drawStart;
+  final Offset drawEnd;
   final Offset normal;
   final double halfWidth;
   final Offset? screenEntryFrom;
   final Offset? screenEntryTo;
 
   factory _LineGeometry.fromLine(OlivOSMarkLine line, Rect visibleRect) {
-    final allPoints = [for (final polygon in line.polygons) ...polygon];
-
-    var axisStart = allPoints.first;
-    var axisEnd = allPoints[1];
-    var length = (axisEnd - axisStart).distance;
+    final firstPoint = line.polygons.first.first;
+    var axisStart = firstPoint;
+    var axisEnd = firstPoint;
+    var length = 0.0;
     for (final polygon in line.polygons) {
       for (var index = 0; index < polygon.length; index++) {
         final candidateStart = polygon[index];
@@ -247,59 +245,35 @@ class _LineGeometry {
     final polygons = [
       for (final polygon in line.polygons) [...polygon],
     ];
-    final baseStart = axisStart;
-    final baseEnd = axisEnd;
     var start = axisStart;
     var end = axisEnd;
 
-    final hasStartExtension = line.extendStart;
-    final hasEndExtension = line.extendEnd;
     // Overscan generously: the cap must be completely outside the screen, and
     // the line's direction must not change to chase a corner.
     final margin = math.max(12.0, length * 0.3);
-    if (hasEndExtension) {
-      final cap = _capPoints(polygons, start, direction, length);
-      if (cap.isNotEmpty) {
-        final exit = _capExitDistance(
-          cap,
-          polygons,
-          direction,
-          visibleRect,
-          margin,
-        );
-        final delta = direction * exit;
-        _moveCap(polygons, cap, delta);
-        end += delta;
-      }
+    if (line.extendEnd) {
+      end += _extendCap(
+        polygons,
+        start,
+        direction,
+        visibleRect,
+        length,
+        margin,
+      );
     }
-    if (hasStartExtension) {
+    if (line.extendStart) {
       final reverse = -direction;
-      final cap = _capPoints(polygons, end, reverse, length);
-      if (cap.isNotEmpty) {
-        final exit = _capExitDistance(
-          cap,
-          polygons,
-          reverse,
-          visibleRect,
-          margin,
-        );
-        final delta = reverse * exit;
-        _moveCap(polygons, cap, delta);
-        start += delta;
-      }
+      start += _extendCap(polygons, end, reverse, visibleRect, length, margin);
     }
 
     // Start reverse lines at the visible end so the off-screen extension does
     // not delay the beginning of the animation.
     final drawStart = line.reverse
-        ? baseEnd
-        : (hasEndExtension ? baseStart : start);
-    final drawEnd = line.reverse
-        ? (hasStartExtension ? start : baseStart)
-        : end;
+        ? axisEnd
+        : (line.extendEnd ? axisStart : start);
+    final drawEnd = line.reverse ? (line.extendStart ? start : axisStart) : end;
     final drawAxis = drawEnd - drawStart;
-    final drawLength = drawAxis.distance;
-    final drawDirection = drawAxis / drawLength;
+    final drawDirection = drawAxis / drawAxis.distance;
     final normal = Offset(-drawDirection.dy, drawDirection.dx);
 
     var halfWidth = 0.0;
@@ -315,7 +289,7 @@ class _LineGeometry {
     // For reverse lines that extend past the lower-left edge, reveal them from
     // the screen boundary so the off-screen extension and the animated shaft
     // stay connected.
-    final extendReverse = line.reverse && hasEndExtension;
+    final extendReverse = line.reverse && line.extendEnd;
 
     return _LineGeometry._(
       line.id,
@@ -327,8 +301,33 @@ class _LineGeometry {
       normal,
       halfWidth + 0.6,
       extendReverse ? _outsidePoint(end, direction, visibleRect, margin) : null,
-      extendReverse ? baseStart : null,
+      extendReverse ? axisStart : null,
     );
+  }
+
+  /// Moves one outer cap past the screen and returns the applied translation.
+  static Offset _extendCap(
+    List<List<Offset>> polygons,
+    Offset fixed,
+    Offset direction,
+    Rect visibleRect,
+    double length,
+    double margin,
+  ) {
+    final cap = _capPoints(polygons, fixed, direction, length);
+    if (cap.isEmpty) return Offset.zero;
+    final exit = _capExitDistance(
+      cap,
+      polygons,
+      direction,
+      visibleRect,
+      margin,
+    );
+    final delta = direction * exit;
+    for (final projection in cap) {
+      polygons[projection.polygonIndex][projection.pointIndex] += delta;
+    }
+    return delta;
   }
 
   /// Translation distance that puts the whole cap past one screen edge.
@@ -345,8 +344,6 @@ class _LineGeometry {
     Rect rect,
     double margin,
   ) {
-    var exit = double.infinity;
-
     double capDistance(double Function(Offset point) boundaryDistance) {
       var distance = 0.0;
       for (final projection in cap) {
@@ -356,32 +353,18 @@ class _LineGeometry {
       return distance;
     }
 
-    if (direction.dx > 0) {
-      exit = math.min(
-        exit,
+    final distances = <double>[
+      if (direction.dx > 0)
         capDistance((point) => (rect.right - point.dx) / direction.dx),
-      );
-    }
-    if (direction.dx < 0) {
-      exit = math.min(
-        exit,
+      if (direction.dx < 0)
         capDistance((point) => (rect.left - point.dx) / direction.dx),
-      );
-    }
-    if (direction.dy > 0) {
-      exit = math.min(
-        exit,
+      if (direction.dy > 0)
         capDistance((point) => (rect.bottom - point.dy) / direction.dy),
-      );
-    }
-    if (direction.dy < 0) {
-      exit = math.min(
-        exit,
+      if (direction.dy < 0)
         capDistance((point) => (rect.top - point.dy) / direction.dy),
-      );
-    }
-
-    return (exit.isFinite ? exit : 0.0) + margin;
+    ];
+    final exit = distances.isEmpty ? 0.0 : distances.reduce(math.min);
+    return exit + margin;
   }
 
   /// Moves only the points on the outer end cap, preserving its cut angle.
@@ -393,10 +376,8 @@ class _LineGeometry {
   ) {
     final projections = <_PointProjection>[];
     var maxProjection = double.negativeInfinity;
-    for (var polygonIndex = 0; polygonIndex < polygons.length; polygonIndex++) {
-      final polygon = polygons[polygonIndex];
-      for (var pointIndex = 0; pointIndex < polygon.length; pointIndex++) {
-        final point = polygon[pointIndex];
+    for (final (polygonIndex, polygon) in polygons.indexed) {
+      for (final (pointIndex, point) in polygon.indexed) {
         final projection =
             (point - fixed).dx * direction.dx +
             (point - fixed).dy * direction.dy;
@@ -414,16 +395,6 @@ class _LineGeometry {
     ];
   }
 
-  static void _moveCap(
-    List<List<Offset>> polygons,
-    List<_PointProjection> cap,
-    Offset delta,
-  ) {
-    for (final projection in cap) {
-      polygons[projection.polygonIndex][projection.pointIndex] += delta;
-    }
-  }
-
   void paint(Canvas canvas, double progress, Rect visibleRect) {
     if (paths.isEmpty) return;
     if (progress >= 0.999) {
@@ -433,12 +404,13 @@ class _LineGeometry {
       return;
     }
 
-    var paintStart = start;
+    var paintStart = drawStart;
     if (screenEntryFrom != null && screenEntryTo != null) {
       paintStart =
-          _entryPoint(screenEntryFrom!, screenEntryTo!, visibleRect) ?? start;
+          _entryPoint(screenEntryFrom!, screenEntryTo!, visibleRect) ??
+          drawStart;
     }
-    final cut = Offset.lerp(paintStart, end, progress)!;
+    final cut = Offset.lerp(paintStart, drawEnd, progress)!;
     final clip = Path()
       ..addPolygon([
         paintStart + normal * halfWidth,
@@ -468,66 +440,52 @@ class _LineGeometry {
     double margin,
   ) {
     if (!rect.contains(origin)) return origin;
-
-    var tMin = 0.0;
-    var tMax = double.infinity;
-
-    bool clip(double p, double q) {
-      if (p.abs() < 1e-9) return q >= 0;
-      final ratio = q / p;
-      if (p < 0) {
-        if (ratio > tMax) return false;
-        if (ratio > tMin) tMin = ratio;
-      } else {
-        if (ratio < tMin) return false;
-        if (ratio < tMax) tMax = ratio;
-      }
-      return true;
-    }
-
-    if (!clip(-direction.dx, origin.dx - rect.left)) {
+    final interval = _clipToRect(origin, direction, rect);
+    if (interval == null || !interval.exit.isFinite) {
       return origin + direction * margin;
     }
-    if (!clip(direction.dx, rect.right - origin.dx)) {
-      return origin + direction * margin;
-    }
-    if (!clip(-direction.dy, origin.dy - rect.top)) {
-      return origin + direction * margin;
-    }
-    if (!clip(direction.dy, rect.bottom - origin.dy)) {
-      return origin + direction * margin;
-    }
-    if (tMax < 0 || tMin > tMax || !tMax.isFinite) {
-      return origin + direction * margin;
-    }
-    return origin + direction * (tMax + margin);
+    return origin + direction * (interval.exit + margin);
   }
 
   static Offset? _entryPoint(Offset from, Offset to, Rect rect) {
-    final dx = to.dx - from.dx;
-    final dy = to.dy - from.dy;
-    var t0 = 0.0;
-    var t1 = 1.0;
+    final direction = to - from;
+    final interval = _clipToRect(from, direction, rect, maxT: 1);
+    if (interval == null) return null;
+    return from + direction * interval.enter;
+  }
+
+  /// Clips the parametric line `origin + direction * t` against [rect].
+  ///
+  /// Returns the first and last visible `t`, constrained to `[0, maxT]`, or
+  /// null when the line misses the rectangle.
+  static ({double enter, double exit})? _clipToRect(
+    Offset origin,
+    Offset direction,
+    Rect rect, {
+    double maxT = double.infinity,
+  }) {
+    var enter = 0.0;
+    var exit = maxT;
 
     bool clip(double p, double q) {
       if (p.abs() < 1e-9) return q >= 0;
       final ratio = q / p;
       if (p < 0) {
-        if (ratio > t1) return false;
-        if (ratio > t0) t0 = ratio;
+        if (ratio > exit) return false;
+        if (ratio > enter) enter = ratio;
       } else {
-        if (ratio < t0) return false;
-        if (ratio < t1) t1 = ratio;
+        if (ratio < enter) return false;
+        if (ratio < exit) exit = ratio;
       }
       return true;
     }
 
-    if (!clip(-dx, from.dx - rect.left)) return null;
-    if (!clip(dx, rect.right - from.dx)) return null;
-    if (!clip(-dy, from.dy - rect.top)) return null;
-    if (!clip(dy, rect.bottom - from.dy)) return null;
-    if (t0 > t1) return null;
-    return from + Offset(dx, dy) * t0;
+    if (!clip(-direction.dx, origin.dx - rect.left)) return null;
+    if (!clip(direction.dx, rect.right - origin.dx)) return null;
+    if (!clip(-direction.dy, origin.dy - rect.top)) return null;
+    if (!clip(direction.dy, rect.bottom - origin.dy)) return null;
+    if (enter > exit) return null;
+    return (enter: enter, exit: exit);
   }
 }
 
