@@ -40,6 +40,40 @@ class InstancesNotifier extends AsyncNotifier<List<InstanceProfile>> {
     state = AsyncData(updated);
   }
 
+  Future<void> updateProfile({
+    required String id,
+    required String name,
+    required String baseUrl,
+    required bool autoLogin,
+    String? password,
+  }) async {
+    final store = ref.read(instanceStoreProvider);
+    final current = state.value ?? await store.loadProfiles();
+    final index = current.indexWhere((profile) => profile.id == id);
+    if (index < 0) return;
+
+    final existing = current[index];
+    final baseUrlChanged = existing.baseUrl != baseUrl;
+    final updated = [...current];
+    updated[index] = InstanceProfile(
+      id: existing.id,
+      name: name,
+      baseUrl: baseUrl,
+      autoLogin: autoLogin,
+      // Cached version data belongs to the previous server.
+      version: baseUrlChanged ? null : existing.version,
+      versionSlogan: baseUrlChanged ? null : existing.versionSlogan,
+    );
+
+    await store.saveProfiles(updated);
+    if (!autoLogin) {
+      await store.deletePassword(id);
+    } else if (password != null && password.isNotEmpty) {
+      await store.savePassword(id, password);
+    }
+    state = AsyncData(updated);
+  }
+
   Future<int> importConfig(List<InstanceConfigEntry> entries) async {
     final store = ref.read(instanceStoreProvider);
     final current = state.value ?? await store.loadProfiles();

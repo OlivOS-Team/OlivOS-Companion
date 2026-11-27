@@ -98,6 +98,7 @@ class InstanceListPage extends ConsumerWidget {
           onImport: () => _importFromClipboard(context, ref),
           onExportAll: () => _exportAll(context, ref),
           onOpen: (profile) => _openInstance(context, ref, profile),
+          onEdit: (profile) => _showEditDialog(context, ref, profile),
           onExport: (profile) => _exportSingle(context, ref, profile),
           onDelete: (profile) => _confirmDelete(context, ref, profile),
         ),
@@ -244,7 +245,31 @@ class InstanceListPage extends ConsumerWidget {
   Future<void> _showAddDialog(BuildContext context) async {
     await showDialog<bool>(
       context: context,
-      builder: (_) => const AddInstanceDialog(),
+      builder: (_) => const InstanceEditorDialog(),
+    );
+  }
+
+  Future<void> _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    InstanceProfile profile,
+  ) async {
+    var hasStoredPassword = false;
+    try {
+      final password = await ref
+          .read(instanceStoreProvider)
+          .readPassword(profile.id);
+      hasStoredPassword = password != null && password.isNotEmpty;
+    } catch (_) {
+      // Editing can continue even if the secure store cannot be read.
+    }
+    if (!context.mounted) return;
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => InstanceEditorDialog(
+        profile: profile,
+        hasStoredPassword: hasStoredPassword,
+      ),
     );
   }
 
@@ -300,6 +325,7 @@ class _InstanceListBody extends StatefulWidget {
     required this.onImport,
     required this.onExportAll,
     required this.onOpen,
+    required this.onEdit,
     required this.onExport,
     required this.onDelete,
   });
@@ -309,6 +335,7 @@ class _InstanceListBody extends StatefulWidget {
   final VoidCallback onImport;
   final VoidCallback onExportAll;
   final ValueChanged<InstanceProfile> onOpen;
+  final ValueChanged<InstanceProfile> onEdit;
   final ValueChanged<InstanceProfile> onExport;
   final ValueChanged<InstanceProfile> onDelete;
 
@@ -386,6 +413,7 @@ class _InstanceListBodyState extends State<_InstanceListBody> {
                                   child: _InstanceCard(
                                     profile: profile,
                                     onOpen: () => widget.onOpen(profile),
+                                    onEdit: () => widget.onEdit(profile),
                                     onExport: () => widget.onExport(profile),
                                     onDelete: () => widget.onDelete(profile),
                                   ),
@@ -666,12 +694,14 @@ class _InstanceCard extends StatelessWidget {
   const _InstanceCard({
     required this.profile,
     required this.onOpen,
+    required this.onEdit,
     required this.onExport,
     required this.onDelete,
   });
 
   final InstanceProfile profile;
   final VoidCallback onOpen;
+  final VoidCallback onEdit;
   final VoidCallback onExport;
   final VoidCallback onDelete;
 
@@ -728,17 +758,28 @@ class _InstanceCard extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
+                  if (value == 'edit') onEdit();
                   if (value == 'export') onExport();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 8),
+                        Text('编辑'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
                     value: 'export',
                     child: Row(
                       children: [
-                        const Icon(Icons.content_copy, size: 18),
-                        const SizedBox(width: 8),
-                        const Text('导出到剪贴板'),
+                        Icon(Icons.content_copy, size: 18),
+                        SizedBox(width: 8),
+                        Text('导出到剪贴板'),
                       ],
                     ),
                   ),
@@ -816,21 +857,41 @@ class _PageMessage extends StatelessWidget {
   }
 }
 
-class AddInstanceDialog extends ConsumerStatefulWidget {
-  const AddInstanceDialog({super.key});
+class InstanceEditorDialog extends ConsumerStatefulWidget {
+  const InstanceEditorDialog({
+    super.key,
+    this.profile,
+    this.hasStoredPassword = false,
+  });
+
+  final InstanceProfile? profile;
+  final bool hasStoredPassword;
+
+  bool get isEditing => profile != null;
 
   @override
-  ConsumerState<AddInstanceDialog> createState() => _AddInstanceDialogState();
+  ConsumerState<InstanceEditorDialog> createState() =>
+      _InstanceEditorDialogState();
 }
 
-class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
-  final _nameController = TextEditingController();
-  final _urlController = TextEditingController();
-  final _passwordController = TextEditingController();
+class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _urlController;
+  late final TextEditingController _passwordController;
 
-  bool _autoLogin = true;
+  late bool _autoLogin;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = widget.profile;
+    _nameController = TextEditingController(text: profile?.name ?? '');
+    _urlController = TextEditingController(text: profile?.baseUrl ?? '');
+    _passwordController = TextEditingController();
+    _autoLogin = profile?.autoLogin ?? true;
+  }
 
   @override
   void dispose() {
@@ -847,7 +908,7 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
       return;
     }
     final password = _passwordController.text;
-    if (_autoLogin && password.isEmpty) {
+    if (_autoLogin && password.isEmpty && !widget.hasStoredPassword) {
       setState(() => _error = '勾选自动登录时请填写密码，或关闭自动登录');
       return;
     }
@@ -860,14 +921,25 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
       final name = _nameController.text.trim().isEmpty
           ? Uri.parse(baseUrl).host
           : _nameController.text.trim();
-      await ref
-          .read(instancesProvider.notifier)
-          .addProfile(
-            name: name,
-            baseUrl: baseUrl,
-            autoLogin: _autoLogin,
-            password: password,
-          );
+      final notifier = ref.read(instancesProvider.notifier);
+      final newPassword = password.isEmpty ? null : password;
+      final profile = widget.profile;
+      if (profile != null) {
+        await notifier.updateProfile(
+          id: profile.id,
+          name: name,
+          baseUrl: baseUrl,
+          autoLogin: _autoLogin,
+          password: newPassword,
+        );
+      } else {
+        await notifier.addProfile(
+          name: name,
+          baseUrl: baseUrl,
+          autoLogin: _autoLogin,
+          password: newPassword,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
@@ -884,7 +956,7 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return AlertDialog(
-      title: const Text('添加实例'),
+      title: Text(widget.isEditing ? '编辑实例' : '添加实例'),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -893,7 +965,9 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '添加一个 OlivOS WebUI 实例；自动登录会把密码保存到系统安全存储。',
+                widget.isEditing
+                    ? '修改实例名称、WebUI 地址和登录设置。'
+                    : '添加一个 OlivOS WebUI 实例；自动登录会把密码保存到系统安全存储。',
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -919,9 +993,11 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'WebUI 密码',
-                  helperText: '自动登录时保存到系统安全存储',
+                  helperText: widget.isEditing && widget.hasStoredPassword
+                      ? '留空则保留当前密码'
+                      : '自动登录时保存到系统安全存储',
                 ),
                 obscureText: true,
               ),
@@ -970,7 +1046,7 @@ class _AddInstanceDialogState extends ConsumerState<AddInstanceDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('添加'),
+              : Text(widget.isEditing ? '保存' : '添加'),
         ),
       ],
     );
