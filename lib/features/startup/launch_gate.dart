@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'olivos_mark.dart';
 
 // Timeline for the default 1420 ms animation. Line start/duration values are
@@ -136,7 +137,7 @@ class _LaunchSplash extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'OlivOS Companion 启动动画',
+      label: AppLocalizations.of(context).startupAnimationLabel,
       container: true,
       child: ColoredBox(
         key: const Key('launch-splash'),

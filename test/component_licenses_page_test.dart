@@ -4,11 +4,18 @@ import 'package:material_ui/material_ui.dart';
 import 'package:olivos_companion/app/theme.dart';
 import 'package:olivos_companion/features/about/component_licenses_page.dart';
 import 'package:olivos_companion/features/about/component_versions.dart';
+import 'package:olivos_companion/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('组件页面展示版本、开发依赖和许可证文本', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: [
+          ...GlobalMaterialLocalizations.delegates,
+          AppLocalizations.delegate,
+        ],
         theme: buildOlivOSTheme(Brightness.light),
         home: ComponentLicensesPage(
           applicationVersion: '0.2.0+8',

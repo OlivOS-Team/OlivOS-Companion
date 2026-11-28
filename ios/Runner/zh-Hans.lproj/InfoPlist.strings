@@ -1,2 +1,6 @@
 "CFBundleDisplayName" = "OlivOS 托盘";
 "CFBundleName" = "OlivOS 托盘";
+"NSCameraUsageDescription" = "用于扫描 OlivOS Companion 的配置二维码。";
+"NSLocalNetworkUsageDescription" = "需要访问局域网中的 OlivOS WebUI。";
+"NSPhotoLibraryAddUsageDescription" = "用于将配置二维码保存到相册。";
+"NSPhotoLibraryUsageDescription" = "用于从相册选择配置二维码图片。";

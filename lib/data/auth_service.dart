@@ -2,13 +2,23 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-class AuthException implements Exception {
-  const AuthException(this.message);
+enum AuthFailure {
+  malformedResponse,
+  invalidCredentials,
+  rateLimited,
+  httpError,
+}
 
-  final String message;
+class AuthException implements Exception {
+  const AuthException(this.failure, {this.statusCode, this.cause});
+
+  final AuthFailure failure;
+  final int? statusCode;
+  final Object? cause;
 
   @override
-  String toString() => message;
+  String toString() =>
+      'AuthException(${failure.name}, statusCode: $statusCode, cause: $cause)';
 }
 
 class OlivOSVersion {
@@ -71,15 +81,15 @@ class AuthService {
           return token;
         }
       }
-      throw const AuthException('登录响应格式不正确');
+      throw const AuthException(AuthFailure.malformedResponse);
     }
     if (response.statusCode == 401) {
-      throw const AuthException('密码不正确或登录凭据已失效');
+      throw const AuthException(AuthFailure.invalidCredentials);
     }
     if (response.statusCode == 429) {
-      throw const AuthException('尝试次数过多，请稍后再试');
+      throw const AuthException(AuthFailure.rateLimited);
     }
-    throw AuthException('登录失败（HTTP ${response.statusCode}）');
+    throw AuthException(AuthFailure.httpError, statusCode: response.statusCode);
   }
 
   /// WebUI 在启动时读取这个 key；只对实例自身的 origin 生效。

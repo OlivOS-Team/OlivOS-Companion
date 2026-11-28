@@ -25,6 +25,7 @@ class _AboutDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -44,7 +45,7 @@ class _AboutDialog extends StatelessWidget {
         children: [
           const _EasterEggLogo(),
           const SizedBox(width: 12),
-          const Expanded(child: Text('关于 OlivOS Companion')),
+          Expanded(child: Text(l10n.aboutTitle)),
         ],
       ),
       content: SingleChildScrollView(
@@ -52,28 +53,19 @@ class _AboutDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('OlivOS 多实例托盘 客户端', style: textTheme.titleSmall),
+            Text(l10n.aboutSubtitle, style: textTheme.titleSmall),
             const SizedBox(height: 6),
             const _VersionText(),
             const SizedBox(height: 8),
             Text('Witness Union / 见证联合 ', style: textTheme.bodyMedium),
-            sectionTitle('归属'),
-            Text(
-              '本项目由 OlivOS-Team 维护，是独立的 OlivOS 生态客户端，与 '
-              'OlivOS 本体分开构建和发布。本项目不修改 OlivOS 源代码。'
-              'OlivOS 名称、图标及相关品牌归 OlivOS 项目及其贡献者所有。',
-              style: textTheme.bodyMedium,
-            ),
-            sectionTitle('许可证'),
+            sectionTitle(l10n.aboutAttributionTitle),
+            Text(l10n.aboutAttributionBody, style: textTheme.bodyMedium),
+            sectionTitle(l10n.aboutLicenseTitle),
             Text.rich(
               TextSpan(
                 style: textTheme.bodyMedium,
                 children: [
-                  const TextSpan(
-                    text:
-                        '本项目基于 GNU Affero General Public '
-                        'License v3.0（',
-                  ),
+                  TextSpan(text: l10n.aboutLicensePrefix),
                   WidgetSpan(
                     alignment: PlaceholderAlignment.baseline,
                     baseline: TextBaseline.alphabetic,
@@ -83,7 +75,7 @@ class _AboutDialog extends StatelessWidget {
                       uri: Uri.parse(_agplUrl),
                     ),
                   ),
-                  const TextSpan(text: '）发布。'),
+                  TextSpan(text: l10n.aboutLicenseSuffix),
                 ],
               ),
             ),
@@ -108,7 +100,7 @@ class _AboutDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text('世界是属于每一个人的。要创造一个充满逻辑并尊重每一个人的世界。', style: textTheme.bodySmall),
+            Text(l10n.aboutMotto, style: textTheme.bodySmall),
             const SizedBox(height: 4),
             Text(
               '——А. Бабуров, А. Гутнов, И. Лежава и др.'
@@ -122,7 +114,7 @@ class _AboutDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: Text(l10n.close),
         ),
       ],
     );
@@ -142,8 +134,11 @@ Future<void> _openExternal(BuildContext context, Uri uri) async {
     // Fall through to the snackbar below.
   }
   if (!context.mounted) return;
-  ScaffoldMessenger.maybeOf(context)
-      ?.showSnackBar(SnackBar(content: Text('无法打开链接：$uri')));
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+    SnackBar(
+      content: Text(AppLocalizations.of(context).openLinkFailed('$uri')),
+    ),
+  );
 }
 
 class _InlineLink extends StatelessWidget {
@@ -259,7 +254,7 @@ class _EasterEggLogoState extends ConsumerState<_EasterEggLogo> {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'OlivOS 品牌图标',
+      label: AppLocalizations.of(context).aboutLogoLabel,
       child: InkWell(
         key: const Key('about-easter-egg-logo'),
         onTap: _handleTap,
@@ -355,13 +350,14 @@ class _VersionTextState extends State<_VersionText> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final style = Theme.of(context).textTheme.bodySmall;
     return FutureBuilder<PackageInfo>(
       future: _packageInfo,
       builder: (context, snapshot) {
         if (snapshot.hasError) return const SizedBox.shrink();
         final info = snapshot.data;
-        if (info == null) return Text('版本 …', style: style);
+        if (info == null) return Text(l10n.aboutVersionLoading, style: style);
         final buildNumber = info.buildNumber.trim();
         final version = buildNumber.isEmpty
             ? info.version
@@ -374,7 +370,7 @@ class _VersionTextState extends State<_VersionText> {
         return Align(
           alignment: Alignment.centerLeft,
           child: Tooltip(
-            message: '查看组件版本与开源许可证',
+            message: l10n.aboutVersionTooltip,
             child: TextButton(
               key: const Key('about-version-button'),
               onPressed: () {
@@ -392,7 +388,7 @@ class _VersionTextState extends State<_VersionText> {
                 foregroundColor: theme.colorScheme.primary,
                 textStyle: linkStyle,
               ),
-              child: Text('版本 $version'),
+              child: Text(l10n.aboutVersion(version)),
             ),
           ),
         );

@@ -1,5 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+/.gitattributes text eol=lf
 
 # 脚本与源码统一 LF，避免 Windows 下 CRLF 破坏 shell/格式检查
 *.sh text eol=lf
@@ -12,6 +13,7 @@
 *.lock text eol=lf
 *.xml text eol=lf
 *.plist text eol=lf
+*.strings text eol=lf
 *.xcconfig text eol=lf
 *.pbxproj text eol=lf
 *.cmake text eol=lf

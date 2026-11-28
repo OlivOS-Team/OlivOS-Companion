@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
 
@@ -60,13 +62,14 @@ class _QrScannerPageState extends State<QrScannerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        title: const Text('扫描二维码'),
+        title: Text(l10n.qrScannerTitle),
       ),
       body: Stack(
         fit: StackFit.expand,
@@ -95,7 +98,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
             child: SafeArea(
               top: false,
               child: Text(
-                '将 OlivOS Companion 导出的二维码放入框内',
+                l10n.qrScannerInstruction,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.white,
@@ -119,7 +122,7 @@ class _ScannerError extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          '无法打开相机，请检查相机权限后重试。',
+          AppLocalizations.of(context).qrCameraError,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: Colors.white),

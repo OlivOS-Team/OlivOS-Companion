@@ -117,6 +117,41 @@ void main() {
     expect(find.byKey(const Key('about-easter-egg-bubble')), findsNothing);
   });
 
+  testWidgets('关于页支持英文并使用俄语格言', (tester) async {
+    await tester.pumpWidget(_buildTestApp(locale: const Locale('en')));
+    await _openAbout(tester);
+
+    expect(find.text('About OlivOS Companion'), findsOneWidget);
+    expect(find.text('OlivOS multi-instance tray client'), findsOneWidget);
+    expect(find.text('Witness Union / 见证联合 '), findsOneWidget);
+    expect(find.text('Attribution'), findsOneWidget);
+    expect(find.text('License'), findsOneWidget);
+    expect(
+      find.textContaining('This project is released under the GNU Affero'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Мир, принадлежащий всем и каждому'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('А. Бабуров'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/branding/olivos.png',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Close'), findsOneWidget);
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.text('About OlivOS Companion'), findsNothing);
+  });
+
   testWidgets('彩蛋倒数气泡颜色跟随明暗模式', (tester) async {
     await tester.pumpWidget(_buildTestApp());
     await _openAbout(tester);

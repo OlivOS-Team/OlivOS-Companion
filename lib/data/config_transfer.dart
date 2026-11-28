@@ -6,13 +6,27 @@ const configTransferPrefix = 'olivoscompanionconf://';
 const _configFormat = 'olivos-companion-config';
 const _configVersion = 1;
 
-class ConfigTransferException implements Exception {
-  const ConfigTransferException(this.message);
+enum ConfigTransferFailure {
+  invalidInstanceUrl,
+  malformedInstanceUrl,
+  notCompanionConfig,
+  emptyContent,
+  corruptedContent,
+  invalidFormat,
+  unsupportedVersion,
+  noInstances,
+  invalidInstanceFormat,
+}
 
-  final String message;
+class ConfigTransferException implements Exception {
+  const ConfigTransferException(this.failure, {this.detail});
+
+  final ConfigTransferFailure failure;
+  final String? detail;
 
   @override
-  String toString() => message;
+  String toString() =>
+      'ConfigTransferException(${failure.name}, detail: $detail)';
 }
 
 class InstanceConfigEntry {
@@ -44,12 +58,17 @@ class InstanceConfigEntry {
     final rawName = json['name'];
     final rawBaseUrl = json['baseUrl'];
     if (rawBaseUrl is! String) {
-      throw const ConfigTransferException('配置中的实例地址无效');
+      throw const ConfigTransferException(
+        ConfigTransferFailure.invalidInstanceUrl,
+      );
     }
 
     final baseUrl = normalizeBaseUrl(rawBaseUrl);
     if (baseUrl == null) {
-      throw ConfigTransferException('实例地址无效：$rawBaseUrl');
+      throw ConfigTransferException(
+        ConfigTransferFailure.malformedInstanceUrl,
+        detail: rawBaseUrl,
+      );
     }
 
     final name = rawName is String ? rawName.trim() : '';
@@ -80,12 +99,14 @@ class ConfigTransfer {
   static List<InstanceConfigEntry> decode(String input) {
     final text = input.trim();
     if (!text.startsWith(configTransferPrefix)) {
-      throw const ConfigTransferException('不是 OlivOS Companion 配置');
+      throw const ConfigTransferException(
+        ConfigTransferFailure.notCompanionConfig,
+      );
     }
 
     final encoded = text.substring(configTransferPrefix.length).trim();
     if (encoded.isEmpty) {
-      throw const ConfigTransferException('配置内容为空');
+      throw const ConfigTransferException(ConfigTransferFailure.emptyContent);
     }
 
     dynamic decoded;
@@ -93,25 +114,31 @@ class ConfigTransfer {
       final bytes = _decodeBase64(encoded);
       decoded = jsonDecode(utf8.decode(bytes));
     } catch (_) {
-      throw const ConfigTransferException('配置内容损坏或编码不正确');
+      throw const ConfigTransferException(
+        ConfigTransferFailure.corruptedContent,
+      );
     }
 
     if (decoded is! Map<String, dynamic> ||
         decoded['format'] != _configFormat) {
-      throw const ConfigTransferException('配置格式不正确');
+      throw const ConfigTransferException(ConfigTransferFailure.invalidFormat);
     }
     if (decoded['version'] != _configVersion) {
-      throw const ConfigTransferException('配置版本不受支持');
+      throw const ConfigTransferException(
+        ConfigTransferFailure.unsupportedVersion,
+      );
     }
 
     final instances = decoded['instances'];
     if (instances is! List || instances.isEmpty) {
-      throw const ConfigTransferException('配置中没有实例');
+      throw const ConfigTransferException(ConfigTransferFailure.noInstances);
     }
 
     return instances.map<InstanceConfigEntry>((item) {
       if (item is! Map) {
-        throw const ConfigTransferException('配置中的实例格式不正确');
+        throw const ConfigTransferException(
+          ConfigTransferFailure.invalidInstanceFormat,
+        );
       }
       return InstanceConfigEntry.fromJson(Map<String, dynamic>.from(item));
     }).toList();

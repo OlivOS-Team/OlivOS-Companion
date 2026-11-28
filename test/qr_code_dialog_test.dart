@@ -3,9 +3,16 @@ import 'package:material_ui/material_ui.dart';
 import 'package:olivos_companion/app/theme.dart';
 import 'package:olivos_companion/data/config_transfer.dart';
 import 'package:olivos_companion/features/qr/qr_code_dialog.dart';
+import 'package:olivos_companion/l10n/app_localizations.dart';
 
 Widget _host(String data) {
   return MaterialApp(
+    locale: const Locale('zh', 'CN'),
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: [
+      ...GlobalMaterialLocalizations.delegates,
+      AppLocalizations.delegate,
+    ],
     theme: buildOlivOSTheme(Brightness.light),
     home: Builder(
       builder: (context) => Scaffold(

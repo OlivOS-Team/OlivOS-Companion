@@ -9,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/auth_service.dart';
 import '../../data/instance_store.dart';
 import '../../data/web_view_environment.dart';
+import '../../l10n/app_error_localizations.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/instance_profile.dart';
 import '../../state/theme_mode_provider.dart';
 
@@ -70,7 +72,9 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   InAppWebViewController? _controller;
   WebViewEnvironment? _webViewEnvironment;
   String? _token;
-  String? _authError;
+  AuthFailure? _authFailure;
+  int? _authStatusCode;
+  String? _authErrorDetail;
   String? _loadError;
   bool _preparing = true;
   final ValueNotifier<double> _progress = ValueNotifier<double>(0);
@@ -89,7 +93,9 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   }
 
   Future<void> _prepare() async {
-    String? authError;
+    AuthFailure? authFailure;
+    int? authStatusCode;
+    String? authErrorDetail;
     String? token;
 
     unawaited(_cacheVersion());
@@ -104,9 +110,10 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
             password: password,
           );
         } on AuthException catch (error) {
-          authError = error.message;
+          authFailure = error.failure;
+          authStatusCode = error.statusCode;
         } catch (error) {
-          authError = '$error';
+          authErrorDetail = '$error';
         }
       }
     }
@@ -117,7 +124,9 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
       _preparing = false;
       _webViewEnvironment = webViewEnvironment;
       _token = token;
-      _authError = authError;
+      _authFailure = authFailure;
+      _authStatusCode = authStatusCode;
+      _authErrorDetail = authErrorDetail;
     });
   }
 
@@ -136,8 +145,11 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   Future<void> _openExternal(Uri uri) async {
     if (!await canLaunchUrl(uri)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('无法打开链接：$uri')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).openLinkFailed('$uri')),
+        ),
+      );
       return;
     }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -197,7 +209,11 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final authErrorDetail = _authFailure != null
+        ? l10n.authFailureMessage(_authFailure!, statusCode: _authStatusCode)
+        : _authErrorDetail;
     final userScript = _authService.injectionScript(
       origin: widget.profile.origin,
       token: _token,
@@ -217,9 +233,9 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                   children: [
                     Column(
                       children: [
-                        if (_authError != null)
+                        if (authErrorDetail != null)
                           _Notice(
-                            message: '自动登录失败：$_authError。已回退到 WebUI 登录页。',
+                            message: l10n.autoLoginFailed(authErrorDetail),
                             icon: Icons.error_outline,
                             background: colorScheme.errorContainer,
                             border: colorScheme.error.withValues(alpha: 0.35),
@@ -227,7 +243,7 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                           ),
                         if (_loadError != null)
                           _Notice(
-                            message: _loadError!,
+                            message: l10n.pageLoadFailed(_loadError!),
                             icon: Icons.info_outline,
                             background: colorScheme.surfaceContainerHighest,
                             border: colorScheme.outline,
@@ -299,8 +315,7 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                                 onReceivedError: (controller, request, error) {
                                   if (request.isForMainFrame ?? false) {
                                     setState(() {
-                                      _loadError =
-                                          '页面加载失败：${error.description}';
+                                      _loadError = error.description;
                                     });
                                   }
                                 },
@@ -355,6 +370,7 @@ class _OverlayControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Material(
@@ -370,7 +386,7 @@ class _OverlayControls extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: '返回',
+            tooltip: l10n.back,
             onPressed: onBack,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 36, height: 36),
@@ -378,7 +394,7 @@ class _OverlayControls extends StatelessWidget {
           ),
           Container(width: 1, height: 18, color: scheme.outlineVariant),
           IconButton(
-            tooltip: '刷新',
+            tooltip: l10n.refresh,
             onPressed: onRefresh,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints.tightFor(width: 36, height: 36),

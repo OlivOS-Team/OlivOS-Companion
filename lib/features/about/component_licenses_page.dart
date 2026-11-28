@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'component_versions.dart';
 
 typedef ComponentLicenseMap = Map<String, List<LicenseEntry>>;
@@ -36,9 +37,10 @@ class _ComponentLicensesPageState extends State<ComponentLicensesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       key: const Key('component-licenses-page'),
-      appBar: AppBar(title: const Text('组件与许可证')),
+      appBar: AppBar(title: Text(l10n.componentLicensesTitle)),
       body: FutureBuilder<_ComponentCatalog>(
         future: _catalog,
         builder: (context, snapshot) {
@@ -72,13 +74,12 @@ class _ComponentLicensesPageState extends State<ComponentLicensesPage> {
                     );
                   }
                   final entry = entries[index - 1];
+                  final subtitle = entry.subtitle(l10n);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       title: Text(entry.name),
-                      subtitle: entry.subtitle == null
-                          ? null
-                          : Text(entry.subtitle!),
+                      subtitle: subtitle == null ? null : Text(subtitle),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.of(context).push(
@@ -151,11 +152,13 @@ class _ComponentEntry {
   final ComponentVersion? version;
   final List<LicenseEntry> licenses;
 
-  String? get subtitle {
+  String? subtitle(AppLocalizations l10n) {
     final lockedVersion = version;
     if (lockedVersion == null) return null;
-    final suffix = lockedVersion.isDevDependency ? ' · 开发依赖' : '';
-    return '版本 ${lockedVersion.version}$suffix';
+    return l10n.componentVersion(
+      lockedVersion.version,
+      isDevDependency: lockedVersion.isDevDependency,
+    );
   }
 }
 
@@ -166,7 +169,9 @@ class _ComponentLicensePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final subtitle = entry.subtitle(l10n);
     return Scaffold(
       appBar: AppBar(title: Text(entry.name)),
       body: Center(
@@ -175,14 +180,17 @@ class _ComponentLicensePage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (entry.subtitle != null) ...[
-                Text(entry.subtitle!, style: textTheme.bodyMedium),
+              if (subtitle != null) ...[
+                Text(subtitle, style: textTheme.bodyMedium),
                 const SizedBox(height: 16),
               ],
               if (entry.licenses.isEmpty)
-                const Text('未找到该组件的许可证文本。')
+                Text(l10n.componentLicenseMissing)
               else ...[
-                Text('许可证文本', style: textTheme.titleSmall),
+                Text(
+                  l10n.componentLicenseTextTitle,
+                  style: textTheme.titleSmall,
+                ),
                 const SizedBox(height: 8),
                 for (final license in entry.licenses) ...[
                   _LicenseText(license: license),
@@ -230,7 +238,10 @@ class _LoadError extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text('无法加载组件信息。\n$error', textAlign: TextAlign.center),
+        child: Text(
+          AppLocalizations.of(context).componentLoadFailed('$error'),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

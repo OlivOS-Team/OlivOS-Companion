@@ -33,9 +33,9 @@ void main() {
               .login(baseUrl: 'http://127.0.0.1:20480', password: 'wrong'),
       throwsA(
         isA<AuthException>().having(
-          (error) => error.message,
-          'message',
-          contains('密码不正确'),
+          (error) => error.failure,
+          'failure',
+          AuthFailure.invalidCredentials,
         ),
       ),
     );
@@ -50,9 +50,9 @@ void main() {
               .login(baseUrl: 'http://127.0.0.1:20480', password: 'secret'),
       throwsA(
         isA<AuthException>().having(
-          (error) => error.message,
-          'message',
-          contains('尝试次数过多'),
+          (error) => error.failure,
+          'failure',
+          AuthFailure.rateLimited,
         ),
       ),
     );

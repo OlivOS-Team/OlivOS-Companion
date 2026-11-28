@@ -10,7 +10,10 @@ import 'qr_png.dart';
 /// Saves the QR image to the gallery on mobile, or asks for a path on desktop.
 ///
 /// Returns false when the user cancels the desktop save dialog.
-Future<bool> saveQrImage(QrImage image) async {
+Future<bool> saveQrImage(
+  QrImage image, {
+  String typeLabel = 'PNG image',
+}) async {
   final bytes = encodeQrPng(image);
   final name = _fileName();
 
@@ -22,9 +25,9 @@ Future<bool> saveQrImage(QrImage image) async {
 
   final location = await getSaveLocation(
     suggestedName: '$name.png',
-    acceptedTypeGroups: const [
+    acceptedTypeGroups: [
       XTypeGroup(
-        label: 'PNG 图片',
+        label: typeLabel,
         extensions: ['png'],
         mimeTypes: ['image/png'],
       ),

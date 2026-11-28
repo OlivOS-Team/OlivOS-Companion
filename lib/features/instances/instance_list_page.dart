@@ -6,8 +6,12 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/url_utils.dart';
 import '../../data/config_transfer.dart';
+import '../../l10n/app_error_localizations.dart';
+import '../../l10n/app_localizations.dart';
+import '../../models/app_language.dart';
 import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
+import '../../state/language_mode_provider.dart';
 import '../../state/theme_mode_provider.dart';
 import '../about/about_dialog.dart';
 import '../qr/qr_code_dialog.dart';
@@ -32,7 +36,9 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final instances = ref.watch(instancesProvider);
+    final appLanguage = ref.watch(appLanguageProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
@@ -71,8 +77,32 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
           ],
         ),
         actions: [
+          PopupMenuButton<AppLanguage>(
+            key: const Key('language-menu'),
+            tooltip: l10n.language,
+            icon: const Icon(Icons.translate),
+            onSelected: (language) =>
+                ref.read(appLanguageProvider.notifier).setLanguage(language),
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem(
+                value: AppLanguage.system,
+                checked: appLanguage == AppLanguage.system,
+                child: Text(l10n.followSystemLanguage),
+              ),
+              CheckedPopupMenuItem(
+                value: AppLanguage.chinese,
+                checked: appLanguage == AppLanguage.chinese,
+                child: Text(l10n.simplifiedChinese),
+              ),
+              CheckedPopupMenuItem(
+                value: AppLanguage.english,
+                checked: appLanguage == AppLanguage.english,
+                child: Text(l10n.english),
+              ),
+            ],
+          ),
           IconButton(
-            tooltip: isDark ? '切换到浅色模式' : '切换到深色模式',
+            tooltip: isDark ? l10n.switchToLightMode : l10n.switchToDarkMode,
             onPressed: () => ref
                 .read(themeModeProvider.notifier)
                 .toggle(Theme.of(context).brightness),
@@ -83,21 +113,21 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: PopupMenuButton<String>(
-              tooltip: '更多',
+              tooltip: l10n.more,
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
                 if (value == 'about') {
                   showOlivOSCompanionAboutDialog(context);
                 }
               },
-              itemBuilder: (context) => const [
+              itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'about',
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 18),
-                      SizedBox(width: 8),
-                      Text('关于'),
+                      const Icon(Icons.info_outline, size: 18),
+                      const SizedBox(width: 8),
+                      Text(l10n.about),
                     ],
                   ),
                 ),
@@ -108,7 +138,8 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
       ),
       body: instances.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _PageMessage(message: '读取实例失败：$error'),
+        error: (error, _) =>
+            _PageMessage(message: l10n.instancesLoadFailed('$error')),
         data: (items) => _InstanceListBody(
           items: items,
           batchMode: _batchMode,
@@ -153,10 +184,11 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
   }
 
   Future<void> _deleteSelected(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final profiles = _selectedProfiles(ref);
     if (profiles.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请先选择要删除的实例')));
+          .showSnackBar(SnackBar(content: Text(l10n.selectInstancesToDelete)));
       return;
     }
 
@@ -164,12 +196,12 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除选中实例'),
-        content: Text('确定删除选中的 ${profiles.length} 个实例及其本地登录信息吗？'),
+        title: Text(l10n.deleteSelectedInstancesTitle),
+        content: Text(l10n.deleteSelectedConfirm(profiles.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -178,7 +210,7 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
               side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -194,12 +226,13 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
         _selectedIds.clear();
         _batchMode = false;
       });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('已删除 ${profiles.length} 个实例')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.deletedInstances(profiles.length))),
+      );
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('删除失败：$error')));
+          .showSnackBar(SnackBar(content: Text(l10n.deleteFailed('$error'))));
     }
   }
 
@@ -227,27 +260,35 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     List<InstanceConfigEntry> entries,
     String message,
   ) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await Clipboard.setData(
         ClipboardData(text: ConfigTransfer.encode(entries)),
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$message（Base64 编码，非加密）')));
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+          .showSnackBar(SnackBar(content: Text(l10n.exportFailed('$error'))));
     }
   }
 
   Future<void> _exportAll(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final profiles = _batchMode
         ? _selectedProfiles(ref)
         : ref.read(instancesProvider).value ?? const [];
     if (profiles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_batchMode ? '请先选择要导出的实例' : '没有可导出的实例')),
+        SnackBar(
+          content: Text(
+            _batchMode
+                ? l10n.selectInstancesToExport
+                : l10n.noInstancesToExport,
+          ),
+        ),
       );
       return;
     }
@@ -259,13 +300,13 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
         context,
         entries,
         _batchMode
-            ? '已导出选中的 ${entries.length} 个实例到剪贴板'
-            : '已导出 ${entries.length} 个实例到剪贴板',
+            ? l10n.exportedSelectedToClipboard(entries.length)
+            : l10n.exportedAllToClipboard(entries.length),
       );
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+          .showSnackBar(SnackBar(content: Text(l10n.exportFailed('$error'))));
     }
   }
 
@@ -274,24 +315,36 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     WidgetRef ref,
     InstanceProfile profile,
   ) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final entries = await _configEntries(ref, [profile]);
       if (!context.mounted) return;
-      await _copyConfig(context, entries, '已导出「${profile.name}」到剪贴板');
+      await _copyConfig(
+        context,
+        entries,
+        l10n.exportedInstanceToClipboard(profile.name),
+      );
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导出失败：$error')));
+          .showSnackBar(SnackBar(content: Text(l10n.exportFailed('$error'))));
     }
   }
 
   Future<void> _exportAllQr(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final profiles = _batchMode
         ? _selectedProfiles(ref)
         : ref.read(instancesProvider).value ?? const [];
     if (profiles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_batchMode ? '请先选择要导出的实例' : '没有可导出的实例')),
+        SnackBar(
+          content: Text(
+            _batchMode
+                ? l10n.selectInstancesToExport
+                : l10n.noInstancesToExport,
+          ),
+        ),
       );
       return;
     }
@@ -303,13 +356,14 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
         context,
         data: ConfigTransfer.encode(entries),
         description: _batchMode
-            ? '选中的实例（${entries.length} 个）'
-            : '全部实例（${entries.length} 个）',
+            ? l10n.selectedInstancesQrDescription(entries.length)
+            : l10n.allInstancesQrDescription(entries.length),
       );
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('生成二维码失败：$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.qrGenerateFailed('$error'))));
     }
   }
 
@@ -318,29 +372,33 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     WidgetRef ref,
     InstanceProfile profile,
   ) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final entries = await _configEntries(ref, [profile]);
       if (!context.mounted) return;
       await showConfigQrDialog(
         context,
         data: ConfigTransfer.encode(entries),
-        description: '实例「${profile.name}」',
+        description: l10n.instanceQrDescription(profile.name),
       );
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('生成二维码失败：$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.qrGenerateFailed('$error'))));
     }
   }
 
   Future<void> _importFromClipboard(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     ClipboardData? data;
     try {
       data = await Clipboard.getData(Clipboard.kTextPlain);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('读取剪贴板失败：$error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.readClipboardFailed('$error'))),
+      );
       return;
     }
 
@@ -348,7 +406,7 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     if (text == null || text.trim().isEmpty) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('剪贴板中没有配置内容')));
+          .showSnackBar(SnackBar(content: Text(l10n.clipboardEmpty)));
       return;
     }
 
@@ -357,13 +415,15 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
   }
 
   Future<void> _importQrFromGallery(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final XFile? image;
     try {
       image = await ImagePicker().pickImage(source: ImageSource.gallery);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('选择图片失败：$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.selectImageFailed('$error'))));
       return;
     }
     if (image == null || !context.mounted) return;
@@ -373,20 +433,27 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
       text = await decodeQrCodeFromImage(image.path);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('识别二维码失败：$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.recognizeQrFailed('$error'))));
       return;
     }
     if (!context.mounted) return;
     if (text == null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('图片中没有识别到二维码')));
+          .showSnackBar(SnackBar(content: Text(l10n.noQrInImage)));
       return;
     }
-    await _importConfigText(context, ref, text, title: '导入二维码配置');
+    await _importConfigText(
+      context,
+      ref,
+      text,
+      title: l10n.importQrConfigTitle,
+    );
   }
 
   Future<void> _scanQr(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final text = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         fullscreenDialog: true,
@@ -394,22 +461,32 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
       ),
     );
     if (text == null || !context.mounted) return;
-    await _importConfigText(context, ref, text, title: '导入二维码配置');
+    await _importConfigText(
+      context,
+      ref,
+      text,
+      title: l10n.importQrConfigTitle,
+    );
   }
 
   Future<void> _importConfigText(
     BuildContext context,
     WidgetRef ref,
     String text, {
-    String title = '从剪贴板导入',
+    String? title,
   }) async {
+    final l10n = AppLocalizations.of(context);
     List<InstanceConfigEntry> entries;
     try {
       entries = ConfigTransfer.decode(text);
     } on ConfigTransferException catch (error) {
       if (!context.mounted) return;
+      final detail = l10n.configTransferFailureMessage(
+        error.failure,
+        detail: error.detail,
+      );
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导入失败：${error.message}')));
+          .showSnackBar(SnackBar(content: Text(l10n.importFailed(detail))));
       return;
     }
 
@@ -417,16 +494,16 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text('将导入 ${entries.length} 个实例；相同地址的实例会被更新，是否继续？'),
+        title: Text(title ?? l10n.importFromClipboardTitle),
+        content: Text(l10n.importConfirm(entries.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('导入'),
+            child: Text(l10n.importAction),
           ),
         ],
       ),
@@ -439,11 +516,11 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
           .importConfig(entries);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('已导入 $count 个实例')));
+          .showSnackBar(SnackBar(content: Text(l10n.importedInstances(count))));
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('导入失败：$error')));
+          .showSnackBar(SnackBar(content: Text(l10n.importFailed('$error'))));
     }
   }
 
@@ -494,16 +571,17 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
     WidgetRef ref,
     InstanceProfile profile,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除实例'),
-        content: Text('确定删除「${profile.name}」及其本地登录信息吗？'),
+        title: Text(l10n.deleteInstanceTitle),
+        content: Text(l10n.deleteInstanceConfirm(profile.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -512,7 +590,7 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
               side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -724,6 +802,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -735,18 +814,23 @@ class _SectionHeader extends StatelessWidget {
             children: [
               Text(
                 batchMode
-                    ? '已选择 $selectedCount 个'
-                    : (count == 0 ? '尚未添加实例' : '$count 个实例'),
+                    ? l10n.selectedCount(selectedCount)
+                    : (count == 0
+                          ? l10n.noInstancesYet
+                          : l10n.instanceCount(count)),
                 style: textTheme.titleMedium,
               ),
               const SizedBox(height: 2),
-              Text(batchMode ? '批量模式' : '实例', style: textTheme.bodySmall),
+              Text(
+                batchMode ? l10n.batchMode : l10n.instancesTitle,
+                style: textTheme.bodySmall,
+              ),
             ],
           ),
         ),
         if (count > 0 || batchMode) ...[
           _ToolbarButton(
-            tooltip: batchMode ? '退出批量模式' : '批量选择',
+            tooltip: batchMode ? l10n.exitBatchMode : l10n.selectMultiple,
             icon: batchMode ? Icons.close : Icons.checklist,
             onPressed: onToggleBatchMode,
             foreground: scheme.onSurface,
@@ -757,32 +841,32 @@ class _SectionHeader extends StatelessWidget {
         ],
         _SplitMenuButton(
           enabled: !batchMode || selectedCount > 0,
-          label: '导出',
+          label: l10n.exportLabel,
           icon: Icons.file_upload_outlined,
-          tooltip: '导出选项',
+          tooltip: l10n.exportOptions,
           onPressed: onExportAll,
           onSelected: (value) {
             if (value == 'export') onExportAll();
             if (value == 'qr') onExportAllQr();
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'export',
               child: Row(
                 children: [
-                  Icon(Icons.content_copy, size: 18),
-                  SizedBox(width: 8),
-                  Text('导出到剪贴板'),
+                  const Icon(Icons.content_copy, size: 18),
+                  const SizedBox(width: 8),
+                  Text(l10n.exportToClipboard),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'qr',
               child: Row(
                 children: [
-                  Icon(Icons.qr_code_2, size: 18),
-                  SizedBox(width: 8),
-                  Text('导出为二维码'),
+                  const Icon(Icons.qr_code_2, size: 18),
+                  const SizedBox(width: 8),
+                  Text(l10n.exportAsQrCode),
                 ],
               ),
             ),
@@ -791,7 +875,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         if (batchMode)
           _ToolbarButton(
-            tooltip: '删除选中的实例',
+            tooltip: l10n.deleteSelectedInstances,
             icon: Icons.delete_outline,
             enabled: selectedCount > 0,
             onPressed: onDeleteSelected,
@@ -802,9 +886,9 @@ class _SectionHeader extends StatelessWidget {
         else
           _ImportSplitMenuButton(
             primary: true,
-            label: '添加',
+            label: l10n.addLabel,
             icon: Icons.add,
-            tooltip: '添加选项',
+            tooltip: l10n.addOptions,
             onPressed: onAdd,
             onAdd: onAdd,
             onImport: onImport,
@@ -896,6 +980,7 @@ class _ImportSplitMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _SplitMenuButton(
       primary: primary,
       showLabel: showLabel,
@@ -911,44 +996,44 @@ class _ImportSplitMenuButton extends StatelessWidget {
       },
       itemBuilder: (context) => [
         if (includeManualAdd)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'add',
             child: Row(
               children: [
-                Icon(Icons.add, size: 18),
-                SizedBox(width: 8),
-                Text('手动添加'),
+                const Icon(Icons.add, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.addManually),
               ],
             ),
           ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'import',
           child: Row(
             children: [
-              Icon(Icons.content_paste_go, size: 18),
-              SizedBox(width: 8),
-              Text('从剪贴板导入'),
+              const Icon(Icons.content_paste_go, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.importFromClipboard),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'pickQr',
           child: Row(
             children: [
-              Icon(Icons.photo_library_outlined, size: 18),
-              SizedBox(width: 8),
-              Text('从相册选择'),
+              const Icon(Icons.photo_library_outlined, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.chooseFromGallery),
             ],
           ),
         ),
         if (onScanQr != null)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'scan',
             child: Row(
               children: [
-                Icon(Icons.qr_code_scanner, size: 18),
-                SizedBox(width: 8),
-                Text('扫描二维码'),
+                const Icon(Icons.qr_code_scanner, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.scanQrCode),
               ],
             ),
           ),
@@ -1077,6 +1162,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     return Center(
       child: ConstrainedBox(
@@ -1098,13 +1184,13 @@ class _EmptyState extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  '还没有 OlivOS 实例',
+                  l10n.noInstancesMessage,
                   style: textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '添加一个 WebUI 地址，之后可以在这里快速切换多个实例。',
+                  l10n.noInstancesDescription,
                   style: textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),
@@ -1117,14 +1203,14 @@ class _EmptyState extends StatelessWidget {
                     FilledButton.icon(
                       onPressed: onAdd,
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('添加实例'),
+                      label: Text(l10n.addInstance),
                     ),
                     _ImportSplitMenuButton(
                       showLabel: true,
                       includeManualAdd: false,
-                      label: '从剪贴板导入',
+                      label: l10n.importFromClipboard,
                       icon: Icons.content_paste_go,
-                      tooltip: '导入选项',
+                      tooltip: l10n.importOptions,
                       onPressed: onImport,
                       onAdd: onAdd,
                       onImport: onImport,
@@ -1167,6 +1253,7 @@ class _InstanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     const menuWidth = 160.0;
@@ -1262,7 +1349,7 @@ class _InstanceCard extends StatelessWidget {
                     ),
                     if (profile.autoLogin) ...[
                       const SizedBox(height: 6),
-                      _Tag(label: '自动登录'),
+                      _Tag(label: l10n.autoLoginTag),
                     ],
                   ],
                 ),
@@ -1279,7 +1366,7 @@ class _InstanceCard extends StatelessWidget {
                     MenuItemButton(
                       style: itemStyle,
                       onPressed: onEdit,
-                      child: itemRow(Icons.edit_outlined, '编辑'),
+                      child: itemRow(Icons.edit_outlined, l10n.editAction),
                     ),
                     SubmenuButton(
                       style: itemStyle,
@@ -1292,15 +1379,21 @@ class _InstanceCard extends StatelessWidget {
                         MenuItemButton(
                           style: itemStyle,
                           onPressed: onExport,
-                          child: itemRow(Icons.content_copy, '导出到剪贴板'),
+                          child: itemRow(
+                            Icons.content_copy,
+                            l10n.exportToClipboard,
+                          ),
                         ),
                         MenuItemButton(
                           style: itemStyle,
                           onPressed: onExportQr,
-                          child: itemRow(Icons.qr_code_2, '导出为二维码'),
+                          child: itemRow(Icons.qr_code_2, l10n.exportAsQrCode),
                         ),
                       ],
-                      child: itemRow(Icons.file_upload_outlined, '导出'),
+                      child: itemRow(
+                        Icons.file_upload_outlined,
+                        l10n.exportLabel,
+                      ),
                     ),
                     const Divider(height: 1),
                     MenuItemButton(
@@ -1308,13 +1401,13 @@ class _InstanceCard extends StatelessWidget {
                       onPressed: onDelete,
                       child: itemRow(
                         Icons.delete_outline,
-                        '删除',
+                        l10n.delete,
                         color: scheme.error,
                       ),
                     ),
                   ],
                   builder: (context, controller, child) => IconButton(
-                    tooltip: '更多操作',
+                    tooltip: l10n.moreActions,
                     onPressed: () {
                       if (controller.isOpen) {
                         controller.close();
@@ -1427,14 +1520,15 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     final baseUrl = normalizeBaseUrl(_urlController.text);
     if (baseUrl == null) {
-      setState(() => _error = '请输入有效地址，例如 http://192.168.1.10:20480');
+      setState(() => _error = l10n.invalidUrlError);
       return;
     }
     final password = _passwordController.text;
     if (_autoLogin && password.isEmpty && !widget.hasStoredPassword) {
-      setState(() => _error = '勾选自动登录时请填写密码，或关闭自动登录');
+      setState(() => _error = l10n.autoLoginPasswordRequiredError);
       return;
     }
 
@@ -1470,7 +1564,7 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = '保存失败：$error';
+          _error = l10n.saveFailed('$error');
         });
       }
     }
@@ -1478,10 +1572,13 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return AlertDialog(
-      title: Text(widget.isEditing ? '编辑实例' : '添加实例'),
+      title: Text(
+        widget.isEditing ? l10n.editInstanceTitle : l10n.addInstanceTitle,
+      ),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -1491,24 +1588,24 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
             children: [
               Text(
                 widget.isEditing
-                    ? '修改实例名称、WebUI 地址和登录设置。'
-                    : '添加一个 OlivOS WebUI 实例；自动登录会把密码保存到系统安全存储。',
+                    ? l10n.editInstanceDescription
+                    : l10n.addInstanceDescription,
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '名称（可选）',
-                  hintText: '例如：家里主实例',
+                decoration: InputDecoration(
+                  labelText: l10n.nameOptionalLabel,
+                  hintText: l10n.nameHint,
                 ),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'WebUI 地址',
+                decoration: InputDecoration(
+                  labelText: l10n.webUiAddressLabel,
                   hintText: 'http://192.168.1.10:20480',
                 ),
                 keyboardType: TextInputType.url,
@@ -1519,18 +1616,18 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  labelText: 'WebUI 密码',
+                  labelText: l10n.webUiPasswordLabel,
                   helperText: widget.isEditing && widget.hasStoredPassword
-                      ? '留空则保留当前密码'
-                      : '自动登录时保存到系统安全存储',
+                      ? l10n.passwordKeepCurrentHelper
+                      : l10n.passwordSecureHelper,
                 ),
                 obscureText: true,
               ),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('自动登录'),
-                subtitle: const Text('启动时预登录并注入登录凭据'),
+                title: Text(l10n.autoLoginTitle),
+                subtitle: Text(l10n.autoLoginSubtitle),
                 value: _autoLogin,
                 onChanged: _saving
                     ? null
@@ -1561,7 +1658,7 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _saving ? null : _save,
@@ -1571,7 +1668,7 @@ class _InstanceEditorDialogState extends ConsumerState<InstanceEditorDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(widget.isEditing ? '保存' : '添加'),
+              : Text(widget.isEditing ? l10n.save : l10n.add),
         ),
       ],
     );

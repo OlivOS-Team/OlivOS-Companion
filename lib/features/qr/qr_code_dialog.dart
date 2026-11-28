@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:qr/qr.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'qr_image_saver.dart';
 
 Future<void> showConfigQrDialog(
@@ -17,15 +18,16 @@ Future<void> showConfigQrDialog(
     qrImage = QrImage(code);
   } on InputTooLongException {
     if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('无法生成二维码'),
-        content: const Text('配置内容超过二维码容量。请改用“导出到剪贴板”，或减少实例数量后重试。'),
+        title: Text(l10n.qrTooLargeTitle),
+        content: Text(l10n.qrTooLargeMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
+            child: Text(l10n.close),
           ),
         ],
       ),
@@ -68,33 +70,38 @@ class _QrExportDialogState extends State<_QrExportDialog> {
   bool _failed = false;
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _saving = true;
       _message = null;
       _failed = false;
     });
     try {
-      final saved = await saveQrImage(widget.image);
+      final saved = await saveQrImage(
+        widget.image,
+        typeLabel: l10n.pngImageFileType,
+      );
       if (!mounted) return;
       setState(() {
         _saving = false;
-        if (saved) _message = '二维码已保存';
+        if (saved) _message = l10n.qrSaved;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _saving = false;
         _failed = true;
-        _message = '保存二维码失败：$error';
+        _message = l10n.qrSaveFailed('$error');
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return AlertDialog(
-      title: const Text('导出二维码'),
+      title: Text(l10n.qrExportTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -108,7 +115,7 @@ class _QrExportDialogState extends State<_QrExportDialog> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Semantics(
-                label: '实例配置二维码',
+                label: l10n.qrSemanticsLabel,
                 image: true,
                 child: CustomPaint(
                   size: Size.square(widget.qrSize),
@@ -118,13 +125,13 @@ class _QrExportDialogState extends State<_QrExportDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              '用 OlivOS Companion 手机端扫描此二维码导入配置。',
+              l10n.qrScanInstruction,
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
-              '二维码包含自动登录密码，请仅用于自己的设备。',
+              l10n.qrSecretWarning,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -154,11 +161,11 @@ class _QrExportDialogState extends State<_QrExportDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('保存到本地'),
+              : Text(l10n.qrSaveLocally),
         ),
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: Text(l10n.close),
         ),
       ],
     );

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:olivos_companion/app/theme.dart';
 import 'package:olivos_companion/data/config_transfer.dart';
 import 'package:olivos_companion/features/instances/instance_list_page.dart';
+import 'package:olivos_companion/l10n/app_localizations.dart';
 import 'package:olivos_companion/models/instance_profile.dart';
 import 'package:olivos_companion/state/instances_provider.dart';
 
@@ -15,8 +16,11 @@ Widget _app(MemoryInstanceStore store) {
     overrides: [instanceStoreProvider.overrideWithValue(store)],
     child: MaterialApp(
       locale: const Locale('zh', 'CN'),
-      supportedLocales: const [Locale('zh', 'CN')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: [
+        ...GlobalMaterialLocalizations.delegates,
+        AppLocalizations.delegate,
+      ],
       theme: buildOlivOSTheme(Brightness.light),
       darkTheme: buildOlivOSTheme(Brightness.dark),
       themeMode: ThemeMode.light,

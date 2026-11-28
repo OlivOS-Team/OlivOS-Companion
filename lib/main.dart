@@ -11,6 +11,8 @@ import 'data/settings_store.dart';
 import 'features/instances/instance_list_page.dart';
 import 'features/startup/launch_gate.dart';
 import 'l10n/app_localizations.dart';
+import 'models/app_language.dart';
+import 'state/language_mode_provider.dart';
 import 'state/theme_mode_provider.dart';
 
 Future<void> main() async {
@@ -19,11 +21,13 @@ Future<void> main() async {
 
   final settingsStore = SettingsStore();
   final initialThemeMode = await settingsStore.loadThemeMode();
+  final initialAppLanguage = await settingsStore.loadAppLanguage();
   runApp(
     ProviderScope(
       overrides: [
         settingsStoreProvider.overrideWithValue(settingsStore),
         initialThemeModeProvider.overrideWithValue(initialThemeMode),
+        initialAppLanguageProvider.overrideWithValue(initialAppLanguage),
       ],
       child: const OlivOSCompanionApp(),
     ),
@@ -35,11 +39,18 @@ class OlivOSCompanionApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final appLanguage = ref.watch(appLanguageProvider);
     return MaterialApp(
       title: 'OlivOS Companion',
       debugShowCheckedModeBanner: false,
-      locale: const Locale('zh', 'CN'),
+      locale: switch (appLanguage) {
+        AppLanguage.system => null,
+        AppLanguage.chinese => const Locale('zh', 'CN'),
+        AppLanguage.english => const Locale('en'),
+      },
       supportedLocales: AppLocalizations.supportedLocales,
+      localeListResolutionCallback: (locales, supportedLocales) =>
+          AppLocalizations.resolveSystemLocale(locales),
       localizationsDelegates: [
         ...GlobalMaterialLocalizations.delegates,
         AppLocalizations.delegate,

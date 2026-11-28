@@ -1,2 +1,3 @@
 "CFBundleDisplayName" = "OlivOS 托盘";
 "CFBundleName" = "OlivOS 托盘";
+"NSLocalNetworkUsageDescription" = "需要访问局域网中的 OlivOS WebUI。";

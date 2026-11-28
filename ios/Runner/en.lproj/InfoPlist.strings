@@ -1,2 +1,6 @@
 "CFBundleDisplayName" = "OlivOS Companion";
 "CFBundleName" = "OlivOS Companion";
+"NSCameraUsageDescription" = "Scan OlivOS Companion configuration QR codes.";
+"NSLocalNetworkUsageDescription" = "Access OlivOS WebUI on your local network.";
+"NSPhotoLibraryAddUsageDescription" = "Save configuration QR codes to your photo library.";
+"NSPhotoLibraryUsageDescription" = "Choose a configuration QR code image from your photo library.";

@@ -1,2 +1,3 @@
 "CFBundleDisplayName" = "OlivOS Companion";
 "CFBundleName" = "OlivOS Companion";
+"NSLocalNetworkUsageDescription" = "Access OlivOS WebUI on your local network.";
