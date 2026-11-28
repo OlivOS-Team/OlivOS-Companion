@@ -55,7 +55,7 @@ Widget _app(MemoryInstanceStore instances, SettingsStore settings) {
 }
 
 void main() {
-  testWidgets('语言菜单切换界面语言并持久化', (tester) async {
+  testWidgets('更多菜单的语言选项切换界面语言并持久化', (tester) async {
     final settings = _MemorySettingsStore();
     await tester.pumpWidget(_app(MemoryInstanceStore(), settings));
     await tester.pumpAndSettle();
@@ -63,14 +63,9 @@ void main() {
     expect(find.text('还没有 OlivOS 实例'), findsOneWidget);
     expect(find.text('Witness Union / 见证联合'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('language-menu')));
+    await tester.tap(find.byKey(const Key('more-menu')));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.ancestor(
-        of: find.text('English'),
-        matching: find.byType(CheckedPopupMenuItem<AppLanguage>),
-      ),
-    );
+    await tester.tap(find.byKey(const Key('language-english')));
     await tester.pumpAndSettle();
 
     expect(find.text('No OlivOS instances yet'), findsOneWidget);

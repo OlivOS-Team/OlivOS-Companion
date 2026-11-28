@@ -13,6 +13,7 @@ import '../../models/instance_profile.dart';
 import '../../state/instances_provider.dart';
 import '../../state/language_mode_provider.dart';
 import '../../state/theme_mode_provider.dart';
+import '../../widgets/app_menu.dart';
 import '../about/about_dialog.dart';
 import '../qr/qr_code_dialog.dart';
 import '../qr/qr_image_decoder.dart';
@@ -77,30 +78,6 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
           ],
         ),
         actions: [
-          PopupMenuButton<AppLanguage>(
-            key: const Key('language-menu'),
-            tooltip: l10n.language,
-            icon: const Icon(Icons.translate),
-            onSelected: (language) =>
-                ref.read(appLanguageProvider.notifier).setLanguage(language),
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem(
-                value: AppLanguage.system,
-                checked: appLanguage == AppLanguage.system,
-                child: Text(l10n.followSystemLanguage),
-              ),
-              CheckedPopupMenuItem(
-                value: AppLanguage.chinese,
-                checked: appLanguage == AppLanguage.chinese,
-                child: Text(l10n.simplifiedChinese),
-              ),
-              CheckedPopupMenuItem(
-                value: AppLanguage.english,
-                checked: appLanguage == AppLanguage.english,
-                child: Text(l10n.english),
-              ),
-            ],
-          ),
           IconButton(
             tooltip: isDark ? l10n.switchToLightMode : l10n.switchToDarkMode,
             onPressed: () => ref
@@ -112,24 +89,48 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: PopupMenuButton<String>(
+            child: AppMenuIconButton(
+              buttonKey: const Key('more-menu'),
               tooltip: l10n.more,
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'about') {
-                  showOlivOSCompanionAboutDialog(context);
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'about',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 18),
-                      const SizedBox(width: 8),
-                      Text(l10n.about),
-                    ],
-                  ),
+              icon: Icons.more_vert,
+              alignmentOffset: const Offset(48 - AppMenu.width, 0),
+              menuChildren: [
+                AppMenuSectionHeader(
+                  label: l10n.language,
+                  icon: Icons.translate,
+                ),
+                AppMenuItemButton(
+                  key: const Key('language-system'),
+                  icon: null,
+                  label: l10n.followSystemLanguage,
+                  checked: appLanguage == AppLanguage.system,
+                  onPressed: () => ref
+                      .read(appLanguageProvider.notifier)
+                      .setLanguage(AppLanguage.system),
+                ),
+                AppMenuItemButton(
+                  key: const Key('language-chinese'),
+                  icon: null,
+                  label: l10n.simplifiedChinese,
+                  checked: appLanguage == AppLanguage.chinese,
+                  onPressed: () => ref
+                      .read(appLanguageProvider.notifier)
+                      .setLanguage(AppLanguage.chinese),
+                ),
+                AppMenuItemButton(
+                  key: const Key('language-english'),
+                  icon: null,
+                  label: l10n.english,
+                  checked: appLanguage == AppLanguage.english,
+                  onPressed: () => ref
+                      .read(appLanguageProvider.notifier)
+                      .setLanguage(AppLanguage.english),
+                ),
+                AppMenu.divider(context),
+                AppMenuItemButton(
+                  icon: Icons.info_outline,
+                  label: l10n.about,
+                  onPressed: () => showOlivOSCompanionAboutDialog(context),
                 ),
               ],
             ),
@@ -845,30 +846,16 @@ class _SectionHeader extends StatelessWidget {
           icon: Icons.file_upload_outlined,
           tooltip: l10n.exportOptions,
           onPressed: onExportAll,
-          onSelected: (value) {
-            if (value == 'export') onExportAll();
-            if (value == 'qr') onExportAllQr();
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'export',
-              child: Row(
-                children: [
-                  const Icon(Icons.content_copy, size: 18),
-                  const SizedBox(width: 8),
-                  Text(l10n.exportToClipboard),
-                ],
-              ),
+          menuChildren: [
+            AppMenuItemButton(
+              icon: Icons.content_copy,
+              label: l10n.exportToClipboard,
+              onPressed: onExportAll,
             ),
-            PopupMenuItem(
-              value: 'qr',
-              child: Row(
-                children: [
-                  const Icon(Icons.qr_code_2, size: 18),
-                  const SizedBox(width: 8),
-                  Text(l10n.exportAsQrCode),
-                ],
-              ),
+            AppMenuItemButton(
+              icon: Icons.qr_code_2,
+              label: l10n.exportAsQrCode,
+              onPressed: onExportAllQr,
             ),
           ],
         ),
@@ -988,54 +975,28 @@ class _ImportSplitMenuButton extends StatelessWidget {
       icon: icon,
       tooltip: tooltip,
       onPressed: onPressed,
-      onSelected: (value) {
-        if (value == 'add') onAdd();
-        if (value == 'import') onImport();
-        if (value == 'pickQr') onPickQrImage();
-        if (value == 'scan') onScanQr?.call();
-      },
-      itemBuilder: (context) => [
+      menuChildren: [
         if (includeManualAdd)
-          PopupMenuItem(
-            value: 'add',
-            child: Row(
-              children: [
-                const Icon(Icons.add, size: 18),
-                const SizedBox(width: 8),
-                Text(l10n.addManually),
-              ],
-            ),
+          AppMenuItemButton(
+            icon: Icons.add,
+            label: l10n.addManually,
+            onPressed: onAdd,
           ),
-        PopupMenuItem(
-          value: 'import',
-          child: Row(
-            children: [
-              const Icon(Icons.content_paste_go, size: 18),
-              const SizedBox(width: 8),
-              Text(l10n.importFromClipboard),
-            ],
-          ),
+        AppMenuItemButton(
+          icon: Icons.content_paste_go,
+          label: l10n.importFromClipboard,
+          onPressed: onImport,
         ),
-        PopupMenuItem(
-          value: 'pickQr',
-          child: Row(
-            children: [
-              const Icon(Icons.photo_library_outlined, size: 18),
-              const SizedBox(width: 8),
-              Text(l10n.chooseFromGallery),
-            ],
-          ),
+        AppMenuItemButton(
+          icon: Icons.photo_library_outlined,
+          label: l10n.chooseFromGallery,
+          onPressed: onPickQrImage,
         ),
         if (onScanQr != null)
-          PopupMenuItem(
-            value: 'scan',
-            child: Row(
-              children: [
-                const Icon(Icons.qr_code_scanner, size: 18),
-                const SizedBox(width: 8),
-                Text(l10n.scanQrCode),
-              ],
-            ),
+          AppMenuItemButton(
+            icon: Icons.qr_code_scanner,
+            label: l10n.scanQrCode,
+            onPressed: onScanQr!,
           ),
       ],
     );
@@ -1048,8 +1009,7 @@ class _SplitMenuButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
-    required this.onSelected,
-    required this.itemBuilder,
+    required this.menuChildren,
     this.primary = false,
     this.enabled = true,
     this.showLabel = false,
@@ -1059,8 +1019,7 @@ class _SplitMenuButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
-  final ValueChanged<String> onSelected;
-  final List<PopupMenuEntry<String>> Function(BuildContext) itemBuilder;
+  final List<Widget> menuChildren;
   final bool primary;
   final bool enabled;
   final bool showLabel;
@@ -1127,17 +1086,32 @@ class _SplitMenuButton extends StatelessWidget {
             ),
           ),
           Container(width: 1, height: 18, color: dividerColor),
-          PopupMenuButton<String>(
-            tooltip: tooltip,
-            enabled: enabled,
-            onSelected: onSelected,
-            itemBuilder: itemBuilder,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-              child: Icon(
-                Icons.keyboard_arrow_down,
-                size: 18,
-                color: foreground,
+          AppMenuAnchor(
+            alignmentOffset: const Offset(34 - AppMenu.width, 0),
+            menuChildren: menuChildren,
+            builder: (context, controller, child) => Tooltip(
+              message: tooltip,
+              child: InkWell(
+                onTap: enabled
+                    ? () {
+                        if (controller.isOpen) {
+                          controller.close();
+                        } else {
+                          controller.open();
+                        }
+                      }
+                    : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 9,
+                  ),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: foreground,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1256,49 +1230,7 @@ class _InstanceCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    const menuWidth = 160.0;
     const anchorWidth = 48.0;
-    MenuStyle buildMenuStyle({AlignmentGeometry? alignment}) {
-      return MenuStyle(
-        alignment: alignment,
-        backgroundColor: WidgetStatePropertyAll(
-          theme.popupMenuTheme.color ?? scheme.surface,
-        ),
-        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-        shadowColor: WidgetStatePropertyAll(
-          theme.popupMenuTheme.shadowColor ?? scheme.shadow,
-        ),
-        elevation: WidgetStatePropertyAll(theme.popupMenuTheme.elevation ?? 6),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: 8),
-        ),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-            side: BorderSide(color: scheme.outline),
-          ),
-        ),
-      );
-    }
-
-    final menuStyle = buildMenuStyle(alignment: AlignmentDirectional.topStart);
-    final submenuStyle = buildMenuStyle();
-    final itemStyle = MenuItemButton.styleFrom(
-      foregroundColor: scheme.onSurface,
-      textStyle: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurface),
-      minimumSize: const Size(menuWidth, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-    );
-
-    Widget itemRow(IconData icon, String label, {Color? color}) {
-      return Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Text(label, style: color == null ? null : TextStyle(color: color)),
-        ],
-      );
-    }
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -1357,66 +1289,40 @@ class _InstanceCard extends StatelessWidget {
               if (batchMode)
                 Checkbox(value: selected, onChanged: (_) => onToggleSelected())
               else
-                MenuAnchor(
-                  style: menuStyle,
-                  // Match PopupMenuButton: right-align the menu with the button.
-                  alignmentOffset: const Offset(anchorWidth - menuWidth, 0),
-                  animated: true,
+                AppMenuIconButton(
+                  icon: Icons.more_vert,
+                  tooltip: l10n.moreActions,
+                  alignmentOffset: const Offset(anchorWidth - AppMenu.width, 0),
                   menuChildren: [
-                    MenuItemButton(
-                      style: itemStyle,
+                    AppMenuItemButton(
+                      icon: Icons.edit_outlined,
+                      label: l10n.editAction,
                       onPressed: onEdit,
-                      child: itemRow(Icons.edit_outlined, l10n.editAction),
                     ),
-                    SubmenuButton(
-                      style: itemStyle,
-                      menuStyle: submenuStyle,
-                      animated: true,
-                      submenuIcon: const WidgetStatePropertyAll<Widget?>(
-                        Icon(Icons.chevron_right, size: 18),
-                      ),
+                    AppMenuSubmenuButton(
+                      icon: Icons.file_upload_outlined,
+                      label: l10n.exportLabel,
                       menuChildren: [
-                        MenuItemButton(
-                          style: itemStyle,
+                        AppMenuItemButton(
+                          icon: Icons.content_copy,
+                          label: l10n.exportToClipboard,
                           onPressed: onExport,
-                          child: itemRow(
-                            Icons.content_copy,
-                            l10n.exportToClipboard,
-                          ),
                         ),
-                        MenuItemButton(
-                          style: itemStyle,
+                        AppMenuItemButton(
+                          icon: Icons.qr_code_2,
+                          label: l10n.exportAsQrCode,
                           onPressed: onExportQr,
-                          child: itemRow(Icons.qr_code_2, l10n.exportAsQrCode),
                         ),
                       ],
-                      child: itemRow(
-                        Icons.file_upload_outlined,
-                        l10n.exportLabel,
-                      ),
                     ),
-                    const Divider(height: 1),
-                    MenuItemButton(
-                      style: itemStyle,
+                    AppMenu.divider(context),
+                    AppMenuItemButton(
+                      icon: Icons.delete_outline,
+                      label: l10n.delete,
                       onPressed: onDelete,
-                      child: itemRow(
-                        Icons.delete_outline,
-                        l10n.delete,
-                        color: scheme.error,
-                      ),
+                      color: scheme.error,
                     ),
                   ],
-                  builder: (context, controller, child) => IconButton(
-                    tooltip: l10n.moreActions,
-                    onPressed: () {
-                      if (controller.isOpen) {
-                        controller.close();
-                      } else {
-                        controller.open();
-                      }
-                    },
-                    icon: const Icon(Icons.more_vert),
-                  ),
                 ),
             ],
           ),
