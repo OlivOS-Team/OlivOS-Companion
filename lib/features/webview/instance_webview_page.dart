@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +14,7 @@ import '../../l10n/app_error_localizations.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/instance_profile.dart';
 import '../../state/theme_mode_provider.dart';
+import '../about/easter_egg_mode.dart';
 
 /// WebUI 的退出登录是页面内按钮；点击后通知原生页面退出。
 const _webUiLogoutBridge = r'''
@@ -55,6 +57,32 @@ const _webUiThemeBridge = r'''
 })();
 ''';
 
+/// Easter-egg diagnostics: reports the WebUI's requestAnimationFrame rate.
+const _webUiFpsBridge = r'''
+(function () {
+  if (window.__olivosFpsBound) return;
+  window.__olivosFpsBound = true;
+  var frames = 0;
+  var last = performance.now();
+  function report(now) {
+    frames++;
+    var elapsed = now - last;
+    if (elapsed >= 1000) {
+      try {
+        window.flutter_inappwebview.callHandler(
+          'olivosFps',
+          frames * 1000 / elapsed
+        );
+      } catch (_) {}
+      frames = 0;
+      last = now;
+    }
+    requestAnimationFrame(report);
+  }
+  requestAnimationFrame(report);
+})();
+''';
+
 class InstanceWebViewPage extends ConsumerStatefulWidget {
   const InstanceWebViewPage({super.key, required this.profile});
 
@@ -79,17 +107,45 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   bool _preparing = true;
   final ValueNotifier<double> _progress = ValueNotifier<double>(0);
   bool _logoutHandled = false;
+  bool _diagnosticsEnabled = false;
+  double? _webFps;
+  double? _uiFps;
+  int _uiFrameCount = 0;
+  final Stopwatch _uiFpsWindow = Stopwatch()..start();
 
   @override
   void initState() {
     super.initState();
+    _diagnosticsEnabled = ref.read(easterEggModeProvider);
+    if (_diagnosticsEnabled) {
+      SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
+    }
     _prepare();
   }
 
   @override
   void dispose() {
+    if (_diagnosticsEnabled) {
+      SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+    }
     _progress.dispose();
     super.dispose();
+  }
+
+  void _onFrameTimings(List<FrameTiming> timings) {
+    if (!mounted) return;
+    _uiFrameCount += timings.length;
+    final elapsed = _uiFpsWindow.elapsed;
+    if (elapsed < const Duration(seconds: 1)) return;
+    final fps = _uiFrameCount * 1000 / elapsed.inMilliseconds;
+    _uiFrameCount = 0;
+    _uiFpsWindow.reset();
+    setState(() => _uiFps = fps);
+  }
+
+  void _onWebFps(Object? value) {
+    if (!mounted || value is! num) return;
+    setState(() => _webFps = value.toDouble());
   }
 
   Future<void> _prepare() async {
@@ -291,6 +347,17 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                                       return null;
                                     },
                                   );
+                                  if (_diagnosticsEnabled) {
+                                    controller.addJavaScriptHandler(
+                                      handlerName: 'olivosFps',
+                                      callback: (args) {
+                                        _onWebFps(
+                                          args.isNotEmpty ? args.first : null,
+                                        );
+                                        return null;
+                                      },
+                                    );
+                                  }
                                 },
                                 onLoadStart: (controller, url) {
                                   if (_loadError != null) {
@@ -308,6 +375,11 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                                   controller.evaluateJavascript(
                                     source: _webUiThemeBridge,
                                   );
+                                  if (_diagnosticsEnabled) {
+                                    controller.evaluateJavascript(
+                                      source: _webUiFpsBridge,
+                                    );
+                                  }
                                 },
                                 onProgressChanged: (controller, progress) {
                                   _progress.value = progress / 100;
@@ -349,14 +421,59 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                     Positioned(
                       right: 12,
                       bottom: MediaQuery.paddingOf(context).bottom + 12,
-                      child: _OverlayControls(
-                        onBack: _handleBack,
-                        onRefresh: () => _controller?.reload(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (_diagnosticsEnabled) ...[
+                            _WebViewDiagnostics(webFps: _webFps, uiFps: _uiFps),
+                            const SizedBox(width: 8),
+                          ],
+                          _OverlayControls(
+                            onBack: _handleBack,
+                            onRefresh: () => _controller?.reload(),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _WebViewDiagnostics extends StatelessWidget {
+  const _WebViewDiagnostics({required this.webFps, required this.uiFps});
+
+  final double? webFps;
+  final double? uiFps;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final web = webFps?.toStringAsFixed(0) ?? '--';
+    final ui = uiFps?.toStringAsFixed(0) ?? '--';
+    return Material(
+      key: const Key('webview-easter-egg-diagnostics'),
+      color: scheme.surface.withValues(alpha: 0.94),
+      elevation: 1,
+      shadowColor: theme.shadowColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Text(
+          'WEB $web  UI $ui',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: scheme.onSurface,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ),
     );
   }
