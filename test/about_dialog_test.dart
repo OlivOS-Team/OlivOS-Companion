@@ -6,13 +6,17 @@ import 'package:olivos_companion/features/about/about_dialog.dart';
 import 'package:olivos_companion/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'support/app_version.dart';
+
 void main() {
+  final appVersion = AppVersionFixture.load();
+
   setUp(() {
     PackageInfo.setMockInitialValues(
       appName: 'OlivOS Companion',
       packageName: 'com.olivosteam.olivos_companion',
-      version: '0.2.2',
-      buildNumber: '9',
+      version: appVersion.version,
+      buildNumber: appVersion.buildNumber,
       buildSignature: '',
     );
   });
@@ -22,7 +26,7 @@ void main() {
     await _openAbout(tester);
 
     expect(find.text('关于 OlivOS Companion'), findsOneWidget);
-    expect(find.text('版本 0.2.2+9'), findsOneWidget);
+    expect(find.text('版本 ${appVersion.fullVersion}'), findsOneWidget);
     expect(find.textContaining('OlivOS-Team'), findsWidgets);
     expect(find.textContaining('AGPL-3.0'), findsOneWidget);
     expect(find.byKey(const Key('about-agpl-link')), findsOneWidget);
@@ -33,7 +37,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('component-licenses-page')), findsOneWidget);
     expect(find.text('组件与许可证'), findsOneWidget);
-    expect(find.text('OlivOS Companion 0.2.2+9'), findsOneWidget);
+    expect(
+      find.text('OlivOS Companion ${appVersion.fullVersion}'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();

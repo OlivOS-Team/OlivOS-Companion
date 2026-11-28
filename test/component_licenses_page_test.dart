@@ -6,7 +6,11 @@ import 'package:olivos_companion/features/about/component_licenses_page.dart';
 import 'package:olivos_companion/features/about/component_versions.dart';
 import 'package:olivos_companion/l10n/app_localizations.dart';
 
+import 'support/app_version.dart';
+
 void main() {
+  final appVersion = AppVersionFixture.load();
+
   testWidgets('组件页面展示版本、开发依赖和许可证文本', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -18,7 +22,7 @@ void main() {
         ],
         theme: buildOlivOSTheme(Brightness.light),
         home: ComponentLicensesPage(
-          applicationVersion: '0.2.2+9',
+          applicationVersion: appVersion.fullVersion,
           versions: Future.value([
             const ComponentVersion(
               name: 'flutter_riverpod',
@@ -49,7 +53,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('组件与许可证'), findsOneWidget);
-    expect(find.text('OlivOS Companion 0.2.2+9'), findsOneWidget);
+    expect(
+      find.text('OlivOS Companion ${appVersion.fullVersion}'),
+      findsOneWidget,
+    );
     expect(find.text('flutter_riverpod'), findsOneWidget);
     expect(find.text('版本 3.5.0'), findsOneWidget);
     expect(find.text('dev_tool'), findsOneWidget);
