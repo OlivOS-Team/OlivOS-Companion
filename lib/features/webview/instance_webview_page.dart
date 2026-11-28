@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/auth_service.dart';
 import '../../data/instance_store.dart';
 import '../../data/web_view_environment.dart';
+import '../../core/window_theme_service.dart';
 import '../../l10n/app_error_localizations.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/instance_profile.dart';
@@ -93,7 +94,8 @@ class InstanceWebViewPage extends ConsumerStatefulWidget {
       _InstanceWebViewPageState();
 }
 
-class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
+class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage>
+    with WidgetsBindingObserver {
   final AuthService _authService = AuthService();
   final InstanceStore _store = InstanceStore();
 
@@ -110,6 +112,9 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   bool _diagnosticsEnabled = false;
   double? _webFps;
   double? _uiFps;
+  int? _monitorHz;
+  bool _refreshRatePending = false;
+  Timer? _refreshRateTimer;
   int _uiFrameCount = 0;
   final Stopwatch _uiFpsWindow = Stopwatch()..start();
 
@@ -119,6 +124,12 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
     _diagnosticsEnabled = ref.read(easterEggModeProvider);
     if (_diagnosticsEnabled) {
       SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
+      WidgetsBinding.instance.addObserver(this);
+      unawaited(_refreshMonitorHz());
+      _refreshRateTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => unawaited(_refreshMonitorHz()),
+      );
     }
     _prepare();
   }
@@ -127,9 +138,16 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
   void dispose() {
     if (_diagnosticsEnabled) {
       SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+      WidgetsBinding.instance.removeObserver(this);
+      _refreshRateTimer?.cancel();
     }
     _progress.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    unawaited(_refreshMonitorHz());
   }
 
   void _onFrameTimings(List<FrameTiming> timings) {
@@ -141,6 +159,18 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
     _uiFrameCount = 0;
     _uiFpsWindow.reset();
     setState(() => _uiFps = fps);
+  }
+
+  Future<void> _refreshMonitorHz() async {
+    if (!_diagnosticsEnabled || _refreshRatePending) return;
+    _refreshRatePending = true;
+    try {
+      final hz = await WindowThemeService.refreshRate();
+      if (!mounted || hz == null || hz == _monitorHz) return;
+      setState(() => _monitorHz = hz);
+    } finally {
+      _refreshRatePending = false;
+    }
   }
 
   void _onWebFps(Object? value) {
@@ -426,7 +456,11 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (_diagnosticsEnabled) ...[
-                            _WebViewDiagnostics(webFps: _webFps, uiFps: _uiFps),
+                            _WebViewDiagnostics(
+                              webFps: _webFps,
+                              uiFps: _uiFps,
+                              monitorHz: _monitorHz,
+                            ),
                             const SizedBox(width: 8),
                           ],
                           _OverlayControls(
@@ -445,10 +479,15 @@ class _InstanceWebViewPageState extends ConsumerState<InstanceWebViewPage> {
 }
 
 class _WebViewDiagnostics extends StatelessWidget {
-  const _WebViewDiagnostics({required this.webFps, required this.uiFps});
+  const _WebViewDiagnostics({
+    required this.webFps,
+    required this.uiFps,
+    required this.monitorHz,
+  });
 
   final double? webFps;
   final double? uiFps;
+  final int? monitorHz;
 
   @override
   Widget build(BuildContext context) {
@@ -456,6 +495,7 @@ class _WebViewDiagnostics extends StatelessWidget {
     final scheme = theme.colorScheme;
     final web = webFps?.toStringAsFixed(0) ?? '--';
     final ui = uiFps?.toStringAsFixed(0) ?? '--';
+    final hz = monitorHz?.toString() ?? '--';
     return Material(
       key: const Key('webview-easter-egg-diagnostics'),
       color: scheme.surface.withValues(alpha: 0.94),
@@ -468,7 +508,7 @@ class _WebViewDiagnostics extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Text(
-          'WEB $web  UI $ui',
+          'WEB $web  UI $ui  HZ $hz',
           style: theme.textTheme.labelSmall?.copyWith(
             color: scheme.onSurface,
             fontFeatures: const [FontFeature.tabularFigures()],

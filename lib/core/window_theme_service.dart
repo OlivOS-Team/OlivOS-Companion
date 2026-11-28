@@ -7,6 +7,15 @@ class WindowThemeService {
   static const _channel = MethodChannel('olivos_companion/window');
   static bool? _lastDark;
 
+  static Future<int?> refreshRate() async {
+    if (!Platform.isWindows) return null;
+    try {
+      return await _channel.invokeMethod<int>('getRefreshRate');
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> setDark(bool dark) async {
     if ((!Platform.isWindows && !Platform.isMacOS) || _lastDark == dark) {
       return;

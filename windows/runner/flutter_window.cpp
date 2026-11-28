@@ -55,6 +55,32 @@ bool FlutterWindow::OnCreate() {
           result->Success();
           return;
         }
+        if (call.method_name() == "getRefreshRate") {
+          HMONITOR monitor =
+              MonitorFromWindow(GetHandle(), MONITOR_DEFAULTTONEAREST);
+          MONITORINFOEXW monitor_info{};
+          monitor_info.cbSize = sizeof(MONITORINFOEXW);
+          if (monitor == nullptr ||
+              !GetMonitorInfoW(monitor, &monitor_info)) {
+            result->Error("unavailable", "Could not read monitor info");
+            return;
+          }
+
+          DEVMODEW mode{};
+          mode.dmSize = sizeof(DEVMODEW);
+          if (!EnumDisplaySettingsW(monitor_info.szDevice,
+                                    ENUM_CURRENT_SETTINGS, &mode)) {
+            result->Error("unavailable", "Could not read display settings");
+            return;
+          }
+          if (mode.dmDisplayFrequency <= 1) {
+            result->Error("unavailable", "Display refresh rate is unknown");
+            return;
+          }
+          result->Success(flutter::EncodableValue(
+              static_cast<int32_t>(mode.dmDisplayFrequency)));
+          return;
+        }
         result->NotImplemented();
       });
 
