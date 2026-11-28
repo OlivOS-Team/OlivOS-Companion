@@ -140,7 +140,7 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v5
-      - uses: NuGet/setup-nuget@v1
+      - uses: NuGet/setup-nuget@v4
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
