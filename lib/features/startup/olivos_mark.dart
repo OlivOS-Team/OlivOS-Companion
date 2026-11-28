@@ -64,15 +64,15 @@ class OlivOSMarkLine {
 /// or which lines extend beyond the screen. Lines with the same [start] animate
 /// simultaneously. Duplicate [id]s are drawn once.
 const List<OlivOSMarkLine> olivosMarkLines = [
-  // First group: 2 and 4. Once 4 finishes, 1 and 3 start together; 2 can still
-  // be finishing. After 3 finishes, 5-8 start in order with a 0.02 stagger;
-  // 9 follows as soon as 8 completes.
+  // First group: 2 and 4. Once 4 finishes, 3 starts at 0.21 and 1 follows at
+  // 0.22; 2 can still be finishing. After 3 finishes, 5-8 start in order with
+  // a 0.02 stagger; 9 follows as soon as 8 completes.
   // 1: lower-left long diagonal. Draw from upper-right toward lower-left.
   // The two source segments are merged into one polygon; the bottom cap still
   // gets the off-screen extension.
   OlivOSMarkLine(
     id: 1,
-    start: 0.21,
+    start: 0.22,
     duration: 0.30,
     extendEnd: true,
     polygons: [

@@ -11,8 +11,9 @@ void main() {
     expect(lines[4]!.start, 0);
     expect(lines[4]!.duration, 0.20);
     expect(lines[4]!.start + lines[4]!.duration, lessThanOrEqualTo(0.21));
-    expect(lines[1]!.start, 0.21);
+    expect(lines[1]!.start, 0.22);
     expect(lines[3]!.start, 0.21);
+    expect(lines[1]!.start, greaterThan(lines[3]!.start));
     expect(lines[3]!.duration, 0.20);
     expect(lines[1]!.reverse, isFalse);
     expect(lines[3]!.reverse, isTrue);
