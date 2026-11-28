@@ -95,36 +95,39 @@ class _InstanceListPageState extends ConsumerState<InstanceListPage> {
               icon: Icons.more_vert,
               alignmentOffset: const Offset(48 - AppMenu.width, 0),
               menuChildren: [
-                AppMenuSectionHeader(
-                  label: l10n.language,
+                AppMenuSubmenuButton(
+                  key: const Key('language-submenu'),
                   icon: Icons.translate,
-                ),
-                AppMenuItemButton(
-                  key: const Key('language-system'),
-                  icon: null,
-                  label: l10n.followSystemLanguage,
-                  checked: appLanguage == AppLanguage.system,
-                  onPressed: () => ref
-                      .read(appLanguageProvider.notifier)
-                      .setLanguage(AppLanguage.system),
-                ),
-                AppMenuItemButton(
-                  key: const Key('language-chinese'),
-                  icon: null,
-                  label: l10n.simplifiedChinese,
-                  checked: appLanguage == AppLanguage.chinese,
-                  onPressed: () => ref
-                      .read(appLanguageProvider.notifier)
-                      .setLanguage(AppLanguage.chinese),
-                ),
-                AppMenuItemButton(
-                  key: const Key('language-english'),
-                  icon: null,
-                  label: l10n.english,
-                  checked: appLanguage == AppLanguage.english,
-                  onPressed: () => ref
-                      .read(appLanguageProvider.notifier)
-                      .setLanguage(AppLanguage.english),
+                  label: l10n.language,
+                  menuChildren: [
+                    AppMenuItemButton(
+                      key: const Key('language-system'),
+                      icon: null,
+                      label: l10n.followSystemLanguage,
+                      checked: appLanguage == AppLanguage.system,
+                      onPressed: () => ref
+                          .read(appLanguageProvider.notifier)
+                          .setLanguage(AppLanguage.system),
+                    ),
+                    AppMenuItemButton(
+                      key: const Key('language-chinese'),
+                      icon: null,
+                      label: l10n.simplifiedChinese,
+                      checked: appLanguage == AppLanguage.chinese,
+                      onPressed: () => ref
+                          .read(appLanguageProvider.notifier)
+                          .setLanguage(AppLanguage.chinese),
+                    ),
+                    AppMenuItemButton(
+                      key: const Key('language-english'),
+                      icon: null,
+                      label: l10n.english,
+                      checked: appLanguage == AppLanguage.english,
+                      onPressed: () => ref
+                          .read(appLanguageProvider.notifier)
+                          .setLanguage(AppLanguage.english),
+                    ),
+                  ],
                 ),
                 AppMenu.divider(context),
                 AppMenuItemButton(

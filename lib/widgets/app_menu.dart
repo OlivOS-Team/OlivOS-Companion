@@ -82,50 +82,6 @@ class AppMenuRow extends StatelessWidget {
   }
 }
 
-class AppMenuHeader extends StatelessWidget {
-  const AppMenuHeader({super.key, required this.label, this.icon});
-
-  final String label;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = theme.colorScheme.onSurfaceVariant;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-        ],
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color)),
-      ],
-    );
-  }
-}
-
-class AppMenuSectionHeader extends StatelessWidget {
-  const AppMenuSectionHeader({super.key, required this.label, this.icon});
-
-  final String label;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-      child: SizedBox(
-        height: 24,
-        child: Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: AppMenuHeader(label: label, icon: icon),
-        ),
-      ),
-    );
-  }
-}
-
 class AppMenuItemButton extends StatelessWidget {
   const AppMenuItemButton({
     super.key,

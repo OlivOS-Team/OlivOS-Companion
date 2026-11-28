@@ -65,6 +65,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('more-menu')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('language-english')), findsNothing);
+    await tester.tap(find.byKey(const Key('language-submenu')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('language-english')));
     await tester.pumpAndSettle();
 
