@@ -10,6 +10,7 @@ import 'package:olivos_companion/models/instance_profile.dart';
 import 'package:olivos_companion/state/instances_provider.dart';
 
 import 'support/memory_instance_store.dart';
+import 'support/test_fixtures.dart';
 
 Widget _app(MemoryInstanceStore store) {
   return ProviderScope(
@@ -63,16 +64,8 @@ void main() {
 
     final store = MemoryInstanceStore(
       initialProfiles: const [
-        InstanceProfile(
-          id: 'one',
-          name: '实例一',
-          baseUrl: 'http://127.0.0.1:20480',
-        ),
-        InstanceProfile(
-          id: 'two',
-          name: '实例二',
-          baseUrl: 'http://127.0.0.1:20481',
-        ),
+        InstanceProfile(id: 'one', name: '实例一', baseUrl: testBaseUrl),
+        InstanceProfile(id: 'two', name: '实例二', baseUrl: testBaseUrl2),
       ],
     );
     await tester.pumpWidget(_app(store));
@@ -96,16 +89,8 @@ void main() {
   testWidgets('批量模式可以选择并删除选中实例', (tester) async {
     final store = MemoryInstanceStore(
       initialProfiles: const [
-        InstanceProfile(
-          id: 'one',
-          name: '实例一',
-          baseUrl: 'http://127.0.0.1:20480',
-        ),
-        InstanceProfile(
-          id: 'two',
-          name: '实例二',
-          baseUrl: 'http://127.0.0.1:20481',
-        ),
+        InstanceProfile(id: 'one', name: '实例一', baseUrl: testBaseUrl),
+        InstanceProfile(id: 'two', name: '实例二', baseUrl: testBaseUrl2),
       ],
     );
     await tester.pumpWidget(_app(store));

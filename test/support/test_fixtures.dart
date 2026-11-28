@@ -1,0 +1,9 @@
+const testBaseUrl = 'http://127.0.0.1:20480';
+const testBaseUrl2 = 'http://127.0.0.1:20481';
+const testBaseUrl3 = 'http://127.0.0.1:20482';
+const testInstanceName = 'dev';
+const testPassword = 'secret';
+const testWebUiVersion = '1.0.5(300)';
+const testWebUiSlogan = '妖刀村正';
+const testAppName = 'OlivOS Companion';
+const testPackageName = 'com.olivosteam.olivos_companion';

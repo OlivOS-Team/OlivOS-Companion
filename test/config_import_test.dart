@@ -7,6 +7,8 @@ import 'package:olivos_companion/data/instance_store.dart';
 import 'package:olivos_companion/models/instance_profile.dart';
 import 'package:olivos_companion/state/instances_provider.dart';
 
+import 'support/test_fixtures.dart';
+
 void main() {
   test('导入配置会新增实例并更新相同地址', () async {
     final directory = await Directory.systemTemp.createTemp(
@@ -16,11 +18,7 @@ void main() {
 
     final store = InstanceStore(dataDirectory: directory);
     await store.saveProfiles([
-      const InstanceProfile(
-        id: 'existing',
-        name: 'old',
-        baseUrl: 'http://127.0.0.1:20480',
-      ),
+      const InstanceProfile(id: 'existing', name: 'old', baseUrl: testBaseUrl),
     ]);
 
     final container = ProviderContainer(
@@ -33,12 +31,12 @@ void main() {
       [
         const InstanceConfigEntry(
           name: 'updated',
-          baseUrl: 'http://127.0.0.1:20480',
+          baseUrl: testBaseUrl,
           autoLogin: true,
         ),
         const InstanceConfigEntry(
           name: 'new',
-          baseUrl: 'http://127.0.0.1:20481',
+          baseUrl: testBaseUrl2,
           autoLogin: false,
         ),
       ],
@@ -53,9 +51,7 @@ void main() {
     );
     expect(
       profiles.any(
-        (profile) =>
-            profile.name == 'new' &&
-            profile.baseUrl == 'http://127.0.0.1:20481',
+        (profile) => profile.name == 'new' && profile.baseUrl == testBaseUrl2,
       ),
       isTrue,
     );

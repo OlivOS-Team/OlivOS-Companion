@@ -3,31 +3,33 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:olivos_companion/data/config_transfer.dart';
 
+import 'support/test_fixtures.dart';
+
 void main() {
   const entry = InstanceConfigEntry(
-    name: 'dev',
-    baseUrl: 'http://127.0.0.1:20480',
+    name: testInstanceName,
+    baseUrl: testBaseUrl,
     autoLogin: true,
-    password: 'secret',
+    password: testPassword,
   );
 
   test('导出使用前缀和 Base64，并可往返解析', () {
     final encoded = ConfigTransfer.encode([entry]);
 
     expect(encoded.startsWith(configTransferPrefix), isTrue);
-    expect(encoded.contains('secret'), isFalse);
+    expect(encoded.contains(testPassword), isFalse);
 
     final decoded = ConfigTransfer.decode(encoded);
     expect(decoded, hasLength(1));
-    expect(decoded.single.name, 'dev');
-    expect(decoded.single.baseUrl, 'http://127.0.0.1:20480');
+    expect(decoded.single.name, testInstanceName);
+    expect(decoded.single.baseUrl, testBaseUrl);
     expect(decoded.single.autoLogin, isTrue);
-    expect(decoded.single.password, 'secret');
+    expect(decoded.single.password, testPassword);
   });
 
   test('单个实例导出同样可用', () {
     final encoded = ConfigTransfer.encode([entry]);
-    expect(ConfigTransfer.decode(encoded).single.name, 'dev');
+    expect(ConfigTransfer.decode(encoded).single.name, testInstanceName);
   });
 
   test('拒绝缺少前缀的内容', () {
@@ -58,7 +60,7 @@ void main() {
     );
 
     final decoded = ConfigTransfer.decode('$configTransferPrefix$payload');
-    expect(decoded.single.baseUrl, 'http://127.0.0.1:20480');
+    expect(decoded.single.baseUrl, testBaseUrl);
     expect(decoded.single.autoLogin, isFalse);
   });
 }

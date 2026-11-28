@@ -5,6 +5,7 @@ import 'package:olivos_companion/models/instance_profile.dart';
 import 'package:olivos_companion/state/instances_provider.dart';
 
 import 'support/memory_instance_store.dart';
+import 'support/test_fixtures.dart';
 
 ProviderContainer _createContainer(MemoryInstanceStore store) {
   final container = ProviderContainer(
@@ -24,16 +25,16 @@ void main() {
         .read(instancesProvider.notifier)
         .addProfile(
           name: '主实例',
-          baseUrl: 'http://127.0.0.1:20480',
+          baseUrl: testBaseUrl,
           autoLogin: true,
-          password: 'secret',
+          password: testPassword,
         );
 
     final profiles = container.read(instancesProvider).value!;
     expect(profiles, hasLength(1));
     expect(profiles.single.name, '主实例');
     expect(store.profiles, hasLength(1));
-    expect(store.passwords[profiles.single.id], 'secret');
+    expect(store.passwords[profiles.single.id], testPassword);
     expect(store.saveCount, 1);
   });
 
@@ -43,9 +44,9 @@ void main() {
         InstanceProfile(
           id: 'dev',
           name: '旧名称',
-          baseUrl: 'http://127.0.0.1:20480',
-          version: '1.0.5(300)',
-          versionSlogan: '妖刀村正',
+          baseUrl: testBaseUrl,
+          version: testWebUiVersion,
+          versionSlogan: testWebUiSlogan,
         ),
       ],
       initialPasswords: const {'dev': 'old-password'},
@@ -57,18 +58,18 @@ void main() {
     await notifier.updateProfile(
       id: 'dev',
       name: '新名称',
-      baseUrl: 'http://127.0.0.1:20480',
+      baseUrl: testBaseUrl,
       autoLogin: true,
     );
     var profile = container.read(instancesProvider).value!.single;
     expect(profile.name, '新名称');
-    expect(profile.version, '1.0.5(300)');
+    expect(profile.version, testWebUiVersion);
     expect(store.passwords['dev'], 'old-password');
 
     await notifier.updateProfile(
       id: 'dev',
       name: '新名称',
-      baseUrl: 'http://127.0.0.1:20481',
+      baseUrl: testBaseUrl2,
       autoLogin: true,
       password: 'new-password',
     );
@@ -80,7 +81,7 @@ void main() {
     await notifier.updateProfile(
       id: 'dev',
       name: '新名称',
-      baseUrl: 'http://127.0.0.1:20481',
+      baseUrl: testBaseUrl2,
       autoLogin: false,
     );
     expect(store.passwords.containsKey('dev'), isFalse);
@@ -89,11 +90,7 @@ void main() {
   test('importConfig 更新同地址实例并新增不同地址实例', () async {
     final store = MemoryInstanceStore(
       initialProfiles: const [
-        InstanceProfile(
-          id: 'existing',
-          name: '旧名称',
-          baseUrl: 'http://127.0.0.1:20480',
-        ),
+        InstanceProfile(id: 'existing', name: '旧名称', baseUrl: testBaseUrl),
       ],
       initialPasswords: const {'existing': 'old-password'},
     );
@@ -104,12 +101,12 @@ void main() {
       [
         const InstanceConfigEntry(
           name: '更新后',
-          baseUrl: 'http://127.0.0.1:20480',
+          baseUrl: testBaseUrl,
           autoLogin: false,
         ),
         const InstanceConfigEntry(
           name: '新增',
-          baseUrl: 'http://127.0.0.1:20481',
+          baseUrl: testBaseUrl2,
           autoLogin: true,
           password: 'new-password',
         ),
@@ -138,7 +135,7 @@ void main() {
         .updateProfile(
           id: 'missing',
           name: '不存在',
-          baseUrl: 'http://127.0.0.1:20480',
+          baseUrl: testBaseUrl,
           autoLogin: true,
         );
 
@@ -149,7 +146,7 @@ void main() {
   test('删除空选择或不存在的实例不会写入', () async {
     final store = MemoryInstanceStore(
       initialProfiles: const [
-        InstanceProfile(id: 'a', name: 'a', baseUrl: 'http://127.0.0.1:20480'),
+        InstanceProfile(id: 'a', name: 'a', baseUrl: testBaseUrl),
       ],
     );
     final container = _createContainer(store);
@@ -166,9 +163,9 @@ void main() {
   test('removeProfiles 只删除选中实例及其密码', () async {
     final store = MemoryInstanceStore(
       initialProfiles: const [
-        InstanceProfile(id: 'a', name: 'a', baseUrl: 'http://127.0.0.1:20480'),
-        InstanceProfile(id: 'b', name: 'b', baseUrl: 'http://127.0.0.1:20481'),
-        InstanceProfile(id: 'c', name: 'c', baseUrl: 'http://127.0.0.1:20482'),
+        InstanceProfile(id: 'a', name: 'a', baseUrl: testBaseUrl),
+        InstanceProfile(id: 'b', name: 'b', baseUrl: testBaseUrl2),
+        InstanceProfile(id: 'c', name: 'c', baseUrl: testBaseUrl3),
       ],
       initialPasswords: const {
         'a': 'a-password',

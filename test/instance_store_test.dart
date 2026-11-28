@@ -6,7 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:olivos_companion/core/app_paths.dart';
 import 'package:olivos_companion/data/instance_store.dart';
 import 'package:olivos_companion/models/instance_profile.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/test_fixtures.dart';
+
+const _instancesFileName = 'instances.json';
 
 class _MemorySecureStorage extends FlutterSecureStorage {
   final Map<String, String> values = {};
@@ -67,16 +72,22 @@ void main() {
       const InstanceProfile(
         id: 'dev',
         name: 'dev',
-        baseUrl: 'http://127.0.0.1:20480',
-        version: '1.0.5(300)',
-        versionSlogan: '妖刀村正',
+        baseUrl: testBaseUrl,
+        version: testWebUiVersion,
+        versionSlogan: testWebUiSlogan,
       ),
     ]);
 
-    expect(File('${directory.path}/instances.json').existsSync(), isTrue);
+    expect(
+      File(p.join(directory.path, _instancesFileName)).existsSync(),
+      isTrue,
+    );
     final profiles = await store.loadProfiles();
     expect(profiles, hasLength(1));
-    expect(profiles.single.displayName, 'dev · 1.0.5(300) - 妖刀村正');
+    expect(
+      profiles.single.displayName,
+      '$testInstanceName · $testWebUiVersion - $testWebUiSlogan',
+    );
   });
 
   test('saveVersion 只更新指定实例', () async {
@@ -87,34 +98,26 @@ void main() {
 
     final store = InstanceStore(dataDirectory: directory);
     await store.saveProfiles([
-      const InstanceProfile(
-        id: 'a',
-        name: 'a',
-        baseUrl: 'http://127.0.0.1:20480',
-      ),
-      const InstanceProfile(
-        id: 'b',
-        name: 'b',
-        baseUrl: 'http://127.0.0.1:20481',
-      ),
+      const InstanceProfile(id: 'a', name: 'a', baseUrl: testBaseUrl),
+      const InstanceProfile(id: 'b', name: 'b', baseUrl: testBaseUrl2),
     ]);
 
     await store.saveVersion(
       id: 'a',
-      version: '1.0.5(300)',
-      versionSlogan: '妖刀村正',
+      version: testWebUiVersion,
+      versionSlogan: testWebUiSlogan,
     );
 
     final profiles = await store.loadProfiles();
-    expect(profiles[0].version, '1.0.5(300)');
+    expect(profiles[0].version, testWebUiVersion);
     expect(profiles[1].version, isNull);
 
     await store.saveVersion(
       id: 'a',
-      version: '1.0.5(300)',
-      versionSlogan: '妖刀村正',
+      version: testWebUiVersion,
+      versionSlogan: testWebUiSlogan,
     );
-    expect((await store.loadProfiles())[0].version, '1.0.5(300)');
+    expect((await store.loadProfiles())[0].version, testWebUiVersion);
   });
 
   test('损坏的实例文件会按空数据处理', () async {
@@ -122,7 +125,8 @@ void main() {
       'olivos-instance-store-',
     );
     addTearDown(() => directory.delete(recursive: true));
-    await File('${directory.path}/instances.json').writeAsString('{bad json');
+    await File(p.join(directory.path, _instancesFileName))
+        .writeAsString('{bad json');
     SharedPreferences.setMockInitialValues({});
 
     final store = InstanceStore(dataDirectory: directory);
@@ -139,7 +143,7 @@ void main() {
         {
           'id': 'legacy',
           'name': '旧实例',
-          'baseUrl': 'http://127.0.0.1:20480',
+          'baseUrl': testBaseUrl,
           'autoLogin': true,
         },
       ]),
@@ -149,7 +153,10 @@ void main() {
     final profiles = await store.loadProfiles();
     expect(profiles, hasLength(1));
     expect(profiles.single.id, 'legacy');
-    expect(File('${directory.path}/instances.json').existsSync(), isTrue);
+    expect(
+      File(p.join(directory.path, _instancesFileName)).existsSync(),
+      isTrue,
+    );
   });
 
   test('无效的旧版数据不会被导入', () async {
@@ -174,8 +181,8 @@ void main() {
       secureStorage: secureStorage,
     );
 
-    await store.savePassword('a', 'secret');
-    expect(await store.readPassword('a'), 'secret');
+    await store.savePassword('a', testPassword);
+    expect(await store.readPassword('a'), testPassword);
     await store.savePassword('empty', '');
     expect(await store.readPassword('empty'), isNull);
     await store.deletePassword('a');

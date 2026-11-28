@@ -5,12 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:olivos_companion/data/auth_service.dart';
 
+import 'support/test_fixtures.dart';
+
 void main() {
   test('login 发送密码并返回 browser_token', () async {
     final client = MockClient((request) async {
-      expect(request.url.toString(), 'http://127.0.0.1:20480/api/login');
+      expect(request.url.toString(), '$testBaseUrl/api/login');
       expect(request.headers['content-type'], startsWith('application/json'));
-      expect(jsonDecode(request.body), {'password': 'secret'});
+      expect(jsonDecode(request.body), {'password': testPassword});
       return http.Response(
         jsonEncode({'browser_token': 'webui.abc'}),
         200,
@@ -19,7 +21,7 @@ void main() {
     });
 
     final token = await AuthService(client: client)
-        .login(baseUrl: 'http://127.0.0.1:20480', password: 'secret');
+        .login(baseUrl: testBaseUrl, password: testPassword);
 
     expect(token, 'webui.abc');
   });
@@ -30,7 +32,7 @@ void main() {
     expect(
       () =>
           AuthService(client: client)
-              .login(baseUrl: 'http://127.0.0.1:20480', password: 'wrong'),
+              .login(baseUrl: testBaseUrl, password: 'wrong'),
       throwsA(
         isA<AuthException>().having(
           (error) => error.failure,
@@ -47,7 +49,7 @@ void main() {
     expect(
       () =>
           AuthService(client: client)
-              .login(baseUrl: 'http://127.0.0.1:20480', password: 'secret'),
+              .login(baseUrl: testBaseUrl, password: testPassword),
       throwsA(
         isA<AuthException>().having(
           (error) => error.failure,
@@ -60,12 +62,12 @@ void main() {
 
   test('fetchVersion 读取公开的 /api/health 版本信息', () async {
     final client = MockClient((request) async {
-      expect(request.url.toString(), 'http://127.0.0.1:20480/api/health');
+      expect(request.url.toString(), '$testBaseUrl/api/health');
       return http.Response(
         jsonEncode({
           'status': 'OK',
-          'version': '1.0.5(300)',
-          'version_slogan': '妖刀村正',
+          'version': testWebUiVersion,
+          'version_slogan': testWebUiSlogan,
         }),
         200,
         headers: {'content-type': 'application/json'},
@@ -73,24 +75,24 @@ void main() {
     });
 
     final version = await AuthService(client: client)
-        .fetchVersion(baseUrl: 'http://127.0.0.1:20480');
+        .fetchVersion(baseUrl: testBaseUrl);
 
-    expect(version?.version, '1.0.5(300)');
-    expect(version?.slogan, '妖刀村正');
+    expect(version?.version, testWebUiVersion);
+    expect(version?.slogan, testWebUiSlogan);
   });
 
   test('fetchVersion 在接口异常时返回 null', () async {
     final client = MockClient((request) async => http.Response('', 503));
 
     final version = await AuthService(client: client)
-        .fetchVersion(baseUrl: 'http://127.0.0.1:20480');
+        .fetchVersion(baseUrl: testBaseUrl);
 
     expect(version, isNull);
   });
 
   test('注入脚本会同步 WebUI 主题', () {
     final script = AuthService().injectionScript(
-      origin: 'http://127.0.0.1:20480',
+      origin: testBaseUrl,
       darkMode: true,
     );
 
@@ -100,11 +102,11 @@ void main() {
 
   test('注入脚本限定 origin 并写入 token key', () {
     final script = AuthService().injectionScript(
-      origin: 'http://127.0.0.1:20480',
+      origin: testBaseUrl,
       token: 'webui.abc',
     );
 
-    expect(script, contains('"http://127.0.0.1:20480"'));
+    expect(script, contains('"$testBaseUrl"'));
     expect(script, contains('olivos.webui.token'));
     expect(script, contains('"webui.abc"'));
   });

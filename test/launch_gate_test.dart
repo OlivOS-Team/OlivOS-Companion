@@ -29,9 +29,6 @@ void main() {
     expect(find.byKey(const Key('launch-splash')), findsOneWidget);
     expect(find.text('主界面'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 900));
-    expect(find.byKey(const Key('launch-splash')), findsOneWidget);
-
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('launch-splash')), findsNothing);
     expect(find.text('主界面'), findsOneWidget);

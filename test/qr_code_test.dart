@@ -2,14 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:olivos_companion/data/config_transfer.dart';
 import 'package:qr/qr.dart';
 
+import 'support/test_fixtures.dart';
+
 void main() {
   test('单个实例配置可以编码为二维码', () {
     final encoded = ConfigTransfer.encode([
       const InstanceConfigEntry(
         name: '测试实例',
-        baseUrl: 'http://127.0.0.1:20480',
+        baseUrl: testBaseUrl,
         autoLogin: true,
-        password: 'password',
+        password: testPassword,
       ),
     ]);
 

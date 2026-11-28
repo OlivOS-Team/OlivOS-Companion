@@ -6,7 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:olivos_companion/data/config_transfer.dart';
 import 'package:olivos_companion/features/qr/qr_image_decoder.dart';
 import 'package:olivos_companion/features/qr/qr_image_saver.dart';
+import 'package:path/path.dart' as p;
 import 'package:qr/qr.dart';
+
+import 'support/test_fixtures.dart';
 
 QrImage _qrFor(String data) {
   return QrImage(
@@ -53,7 +56,7 @@ void main() {
   test('桌面端保存二维码 PNG 文件', () async {
     final directory = await Directory.systemTemp.createTemp('olivos_qr_save_');
     addTearDown(() => directory.delete(recursive: true));
-    final path = '${directory.path}/config-qr.png';
+    final path = p.join(directory.path, 'config-qr.png');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           expect(call.method, 'getSavePath');
@@ -62,7 +65,7 @@ void main() {
     final data = ConfigTransfer.encode([
       const InstanceConfigEntry(
         name: '测试',
-        baseUrl: 'http://127.0.0.1:20480',
+        baseUrl: testBaseUrl,
         autoLogin: false,
       ),
     ]);

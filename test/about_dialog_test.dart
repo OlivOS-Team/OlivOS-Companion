@@ -7,14 +7,15 @@ import 'package:olivos_companion/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'support/app_version.dart';
+import 'support/test_fixtures.dart';
 
 void main() {
   final appVersion = AppVersionFixture.load();
 
   setUp(() {
     PackageInfo.setMockInitialValues(
-      appName: 'OlivOS Companion',
-      packageName: 'com.olivosteam.olivos_companion',
+      appName: testAppName,
+      packageName: testPackageName,
       version: appVersion.version,
       buildNumber: appVersion.buildNumber,
       buildSignature: '',
@@ -75,7 +76,7 @@ void main() {
       expect(find.text(message), findsOneWidget);
     }
 
-    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
     final bubble = find.byKey(const Key('about-easter-egg-bubble'));
     final screenHeight =
         tester.view.physicalSize.height / tester.view.devicePixelRatio;
@@ -176,7 +177,7 @@ void main() {
     expect(bubbleMaterial.color, isNot(lightScheme.inverseSurface));
 
     await tester.pumpWidget(_buildTestApp(themeMode: ThemeMode.dark));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     final darkScheme = buildOlivOSTheme(Brightness.dark).colorScheme;
     expect(tester.widget<Material>(bubble).color, darkScheme.surface);

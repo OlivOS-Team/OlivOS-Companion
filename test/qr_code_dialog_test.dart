@@ -5,6 +5,8 @@ import 'package:olivos_companion/data/config_transfer.dart';
 import 'package:olivos_companion/features/qr/qr_code_dialog.dart';
 import 'package:olivos_companion/l10n/app_localizations.dart';
 
+import 'support/test_fixtures.dart';
+
 Widget _host(String data) {
   return MaterialApp(
     locale: const Locale('zh', 'CN'),
@@ -31,7 +33,7 @@ void main() {
     final data = ConfigTransfer.encode([
       const InstanceConfigEntry(
         name: '测试',
-        baseUrl: 'http://127.0.0.1:20480',
+        baseUrl: testBaseUrl,
         autoLogin: false,
       ),
     ]);
