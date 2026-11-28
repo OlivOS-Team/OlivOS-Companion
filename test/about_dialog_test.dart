@@ -11,8 +11,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'OlivOS Companion',
       packageName: 'com.olivosteam.olivos_companion',
-      version: '0.2.0',
-      buildNumber: '8',
+      version: '0.2.2',
+      buildNumber: '9',
       buildSignature: '',
     );
   });
@@ -22,7 +22,7 @@ void main() {
     await _openAbout(tester);
 
     expect(find.text('关于 OlivOS Companion'), findsOneWidget);
-    expect(find.text('版本 0.2.0+8'), findsOneWidget);
+    expect(find.text('版本 0.2.2+9'), findsOneWidget);
     expect(find.textContaining('OlivOS-Team'), findsWidgets);
     expect(find.textContaining('AGPL-3.0'), findsOneWidget);
     expect(find.byKey(const Key('about-agpl-link')), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('component-licenses-page')), findsOneWidget);
     expect(find.text('组件与许可证'), findsOneWidget);
-    expect(find.text('OlivOS Companion 0.2.0+8'), findsOneWidget);
+    expect(find.text('OlivOS Companion 0.2.2+9'), findsOneWidget);
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();

@@ -18,6 +18,7 @@
 *.pbxproj text eol=lf
 *.cmake text eol=lf
 *.py text eol=lf
+*.iss text eol=lf
 
 # 图片资源按二进制处理
 *.ico binary

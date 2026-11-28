@@ -3,7 +3,7 @@
 
 #define MyAppName "OlivOS Companion"
 #ifndef MyAppVersion
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.2"
 #endif
 #ifndef MyAppVersionNumeric
 #define MyAppVersionNumeric MyAppVersion
