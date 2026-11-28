@@ -287,9 +287,7 @@ class _EasterEggBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final style = theme.textTheme.bodyMedium?.copyWith(
-      color: colors.onInverseSurface,
-    );
+    final style = theme.textTheme.bodyMedium?.copyWith(color: colors.onSurface);
 
     return Positioned.fill(
       child: SafeArea(
@@ -317,9 +315,12 @@ class _EasterEggBubble extends StatelessWidget {
                   container: true,
                   child: Material(
                     key: const Key('about-easter-egg-bubble'),
-                    color: colors.inverseSurface,
+                    color: colors.surface,
                     elevation: 6,
-                    borderRadius: BorderRadius.circular(18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: BorderSide(color: colors.outlineVariant),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,

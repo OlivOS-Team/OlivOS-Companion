@@ -116,9 +116,43 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     expect(find.byKey(const Key('about-easter-egg-bubble')), findsNothing);
   });
+
+  testWidgets('彩蛋倒数气泡颜色跟随明暗模式', (tester) async {
+    await tester.pumpWidget(_buildTestApp());
+    await _openAbout(tester);
+
+    final logo = find.byKey(const Key('about-easter-egg-logo'));
+    for (var i = 0; i < 5; i++) {
+      await tester.tap(logo);
+      await tester.pump();
+    }
+
+    final bubble = find.byKey(const Key('about-easter-egg-bubble'));
+    final bubbleMaterial = tester.widget<Material>(bubble);
+    final lightScheme = buildOlivOSTheme(Brightness.light).colorScheme;
+    expect(bubbleMaterial.color, lightScheme.surface);
+    expect(bubbleMaterial.color, isNot(lightScheme.inverseSurface));
+
+    await tester.pumpWidget(_buildTestApp(themeMode: ThemeMode.dark));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final darkScheme = buildOlivOSTheme(Brightness.dark).colorScheme;
+    expect(tester.widget<Material>(bubble).color, darkScheme.surface);
+    expect(
+      tester.widget<Material>(bubble).color,
+      isNot(darkScheme.inverseSurface),
+    );
+    final text = tester.widget<Text>(find.text('还差 5 次'));
+    expect(text.style?.color, darkScheme.onSurface);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
 }
 
-Widget _buildTestApp({Locale locale = const Locale('zh', 'CN')}) {
+Widget _buildTestApp({
+  Locale locale = const Locale('zh', 'CN'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
   return ProviderScope(
     child: MaterialApp(
       locale: locale,
@@ -128,6 +162,8 @@ Widget _buildTestApp({Locale locale = const Locale('zh', 'CN')}) {
         AppLocalizations.delegate,
       ],
       theme: buildOlivOSTheme(Brightness.light),
+      darkTheme: buildOlivOSTheme(Brightness.dark),
+      themeMode: themeMode,
       home: Builder(
         builder: (context) => Scaffold(
           body: TextButton(
