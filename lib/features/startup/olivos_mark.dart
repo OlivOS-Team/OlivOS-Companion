@@ -57,6 +57,9 @@ class OlivOSMarkLine {
 
 /// The numbered OlivOS mark, in the requested construction order.
 ///
+/// Coordinates are snapped to the icon's 0/60/90/120-degree construction axes
+/// so adjacent stripes share exactly parallel edges.
+///
 /// Pass a custom list to [LaunchGate.lines] to change timing, growth direction,
 /// or which lines extend beyond the screen. Lines with the same [start] animate
 /// simultaneously. Duplicate [id]s are drawn once.
@@ -72,13 +75,13 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     extendEnd: true,
     polygons: [
       [
-        Offset(96.56, 51.53),
-        Offset(91.5, 42.38),
-        Offset(71.68, 76.28),
-        Offset(59.95, 96.3),
-        Offset(70.37, 96.3),
-        Offset(82.18, 76.11),
-        Offset(82.7, 75.22),
+        Offset(96.4834, 51.3801),
+        Offset(91.2723, 42.3542),
+        Offset(71.6839, 76.2823),
+        Offset(60.0822, 96.3770),
+        Offset(70.5044, 96.3770),
+        Offset(82.1992, 76.1211),
+        Offset(82.7146, 75.2284),
       ],
     ],
   ),
@@ -92,12 +95,12 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     extendEnd: true,
     polygons: [
       [
-        Offset(112.45, 51.48),
-        Offset(107.39, 42.33),
-        Offset(87.56, 76.23),
-        Offset(75.84, 96.3),
-        Offset(86.23, 96.3),
-        Offset(98.06, 76.07),
+        Offset(112.3765, 51.3307),
+        Offset(107.1674, 42.3083),
+        Offset(87.5771, 76.2399),
+        Offset(75.9530, 96.3733),
+        Offset(86.3711, 96.3733),
+        Offset(98.0849, 76.0844),
       ],
     ],
   ),
@@ -109,10 +112,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     reverse: true,
     polygons: [
       [
-        Offset(88.95, 13.35),
-        Offset(104.08, 37.5),
-        Offset(99.36, 46.87),
-        Offset(78.51, 13.59),
+        Offset(89.4879, 13.1644),
+        Offset(103.8051, 37.9624),
+        Offset(98.5764, 47.0187),
+        Offset(79.0306, 13.1644),
       ],
     ],
   ),
@@ -127,13 +130,13 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     extendStart: true,
     polygons: [
       [
-        Offset(122.86, 0),
-        Offset(122.86, 6.04),
-        Offset(120.48, 10.15),
-        Offset(106.7, 33.9),
-        Offset(101.61, 24.77),
-        Offset(115.39, 1.03),
-        Offset(115.91, 0.13),
+        Offset(122.8551, 0.0609),
+        Offset(122.8551, 6.0343),
+        Offset(120.4792, 10.1495),
+        Offset(106.7896, 33.8606),
+        Offset(101.5856, 24.8470),
+        Offset(115.3497, 1.0067),
+        Offset(115.8958, 0.0609),
       ],
     ],
   ),
@@ -145,10 +148,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     reverse: true,
     polygons: [
       [
-        Offset(53.03, 0.96),
-        Offset(81.52, 0.96),
-        Offset(86.96, 9.94),
-        Offset(47.69, 9.94),
+        Offset(52.9780, 0.9155),
+        Offset(81.6220, 0.9155),
+        Offset(86.8580, 9.9845),
+        Offset(47.7420, 9.9845),
       ],
     ],
   ),
@@ -159,10 +162,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     duration: 0.09,
     polygons: [
       [
-        Offset(24.36, 25.36),
-        Offset(38.99, 0.9),
-        Offset(49.48, 0.85),
-        Offset(29.33, 34.55),
+        Offset(24.4535, 25.5528),
+        Offset(38.7763, 0.7450),
+        Offset(49.2432, 0.7450),
+        Offset(29.6870, 34.6173),
       ],
     ],
   ),
@@ -173,10 +176,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     duration: 0.09,
     polygons: [
       [
-        Offset(31.34, 62.55),
-        Offset(16.79, 38.05),
-        Offset(21.74, 28.79),
-        Offset(41.78, 62.56),
+        Offset(31.1487, 62.6576),
+        Offset(16.8259, 37.8498),
+        Offset(22.0595, 28.7850),
+        Offset(41.6159, 62.6576),
       ],
     ],
   ),
@@ -187,10 +190,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     duration: 0.09,
     polygons: [
       [
-        Offset(67.71, 75.09),
-        Offset(39.22, 75.09),
-        Offset(33.78, 66.11),
-        Offset(73.05, 66.11),
+        Offset(67.7620, 75.1345),
+        Offset(39.1180, 75.1345),
+        Offset(33.8820, 66.0655),
+        Offset(72.9980, 66.0655),
       ],
     ],
   ),
@@ -202,10 +205,10 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     extendEnd: true,
     polygons: [
       [
-        Offset(122.86, 66.11),
-        Offset(122.86, 75.09),
-        Offset(103.03, 75.09),
-        Offset(108.38, 66.11),
+        Offset(122.8600, 66.0895),
+        Offset(122.8600, 75.1105),
+        Offset(103.1009, 75.1105),
+        Offset(108.3091, 66.0895),
       ],
     ],
   ),

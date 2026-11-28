@@ -199,6 +199,7 @@ class _LineGeometry {
     this.paths,
     this.drawStart,
     this.drawEnd,
+    this.clipStart,
     this.normal,
     this.halfWidth,
   );
@@ -209,6 +210,13 @@ class _LineGeometry {
   final List<Path> paths;
   final Offset drawStart;
   final Offset drawEnd;
+
+  /// Position of the trailing edge of the reveal mask.
+  ///
+  /// The axis endpoint can sit in front of the line's actual start cap. If the
+  /// mask starts there, the cap is hidden until the final full-path frame, then
+  /// pops in. Start the mask behind the whole cap instead.
+  final Offset clipStart;
   final Offset normal;
   final double halfWidth;
 
@@ -279,14 +287,18 @@ class _LineGeometry {
     final normal = Offset(-drawDirection.dy, drawDirection.dx);
 
     var halfWidth = 0.0;
+    var minProjection = 0.0;
     for (final polygon in polygons) {
       for (final point in polygon) {
-        final distance =
-            (point - drawStart).dx * normal.dx +
-            (point - drawStart).dy * normal.dy;
+        final fromStart = point - drawStart;
+        final distance = fromStart.dx * normal.dx + fromStart.dy * normal.dy;
         halfWidth = math.max(halfWidth, distance.abs());
+        final projection =
+            fromStart.dx * drawDirection.dx + fromStart.dy * drawDirection.dy;
+        minProjection = math.min(minProjection, projection);
       }
     }
+    final clipStart = drawStart + drawDirection * (minProjection - 0.01);
 
     return _LineGeometry._(
       line.id,
@@ -295,6 +307,7 @@ class _LineGeometry {
       [for (final polygon in polygons) Path()..addPolygon(polygon, true)],
       drawStart,
       drawEnd,
+      clipStart,
       normal,
       halfWidth + 0.6,
     );
@@ -415,14 +428,12 @@ class _LineGeometry {
       return;
     }
 
-    final paintStart = drawStart;
-    final cutStart =
-        _entryPoint(paintStart, drawEnd, visibleRect) ?? paintStart;
+    final cutStart = _entryPoint(drawStart, drawEnd, visibleRect) ?? drawStart;
     final cut = Offset.lerp(cutStart, drawEnd, progress)!;
     final clip = Path()
       ..addPolygon([
-        paintStart + normal * halfWidth,
-        paintStart - normal * halfWidth,
+        clipStart + normal * halfWidth,
+        clipStart - normal * halfWidth,
         cut - normal * halfWidth,
         cut + normal * halfWidth,
       ], true);
