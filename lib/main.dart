@@ -10,6 +10,7 @@ import 'core/window_theme_service.dart';
 import 'data/settings_store.dart';
 import 'features/instances/instance_list_page.dart';
 import 'features/startup/launch_gate.dart';
+import 'l10n/app_localizations.dart';
 import 'state/theme_mode_provider.dart';
 
 Future<void> main() async {
@@ -38,8 +39,11 @@ class OlivOSCompanionApp extends ConsumerWidget {
       title: 'OlivOS Companion',
       debugShowCheckedModeBanner: false,
       locale: const Locale('zh', 'CN'),
-      supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: [
+        ...GlobalMaterialLocalizations.delegates,
+        AppLocalizations.delegate,
+      ],
       theme: buildOlivOSTheme(Brightness.light),
       darkTheme: buildOlivOSTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),

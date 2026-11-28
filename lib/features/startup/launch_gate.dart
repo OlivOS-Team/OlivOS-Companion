@@ -25,6 +25,7 @@ class LaunchGate extends StatefulWidget {
     required this.child,
     this.lines = olivosMarkLines,
     this.duration = const Duration(milliseconds: _totalTimelineMs),
+    this.onFinished,
   });
 
   final Widget child;
@@ -33,6 +34,9 @@ class LaunchGate extends StatefulWidget {
   final List<OlivOSMarkLine> lines;
 
   final Duration duration;
+
+  /// Called once after the animation has finished and the child is visible.
+  final VoidCallback? onFinished;
 
   @override
   State<LaunchGate> createState() => _LaunchGateState();
@@ -45,6 +49,7 @@ class _LaunchGateState extends State<LaunchGate>
   late final Animation<double> _splashOpacity;
   bool _started = false;
   bool _finished = false;
+  bool _finishNotified = false;
 
   @override
   void initState() {
@@ -71,7 +76,17 @@ class _LaunchGateState extends State<LaunchGate>
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
         setState(() => _finished = true);
+        _notifyFinished();
       }
+    });
+  }
+
+  void _notifyFinished() {
+    if (_finishNotified) return;
+    _finishNotified = true;
+    if (widget.onFinished == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onFinished?.call();
     });
   }
 
@@ -82,6 +97,7 @@ class _LaunchGateState extends State<LaunchGate>
     _started = true;
     if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
       _finished = true;
+      _notifyFinished();
     } else {
       _controller.forward();
     }
