@@ -103,8 +103,9 @@ void main() {
       '5 taps to go',
       'Developer mode is warming up — 4 taps to go',
       'lunzhiPenxil is counting behind the door — 3 taps to go',
-      'A bosom friend afar brings a distant land near. 2 taps to go',
-      'The Sword Pavilion stands steep and towering — 1 tap to go',
+      'If you have friends who know your heart, '
+          'distance cannot keep you apart. 2 taps to go',
+      'The Sword Pass, steep and sheer. 1 tap to go',
     ];
     for (final message in messages) {
       await tester.tap(logo);

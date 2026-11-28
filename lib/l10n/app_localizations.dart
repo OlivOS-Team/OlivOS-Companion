@@ -24,8 +24,10 @@ class AppLocalizations {
         5 => '5 taps to go',
         4 => 'Developer mode is warming up — 4 taps to go',
         3 => 'lunzhiPenxil is counting behind the door — 3 taps to go',
-        2 => 'A bosom friend afar brings a distant land near. 2 taps to go',
-        1 => 'The Sword Pavilion stands steep and towering — 1 tap to go',
+        2 =>
+          'If you have friends who know your heart, '
+              'distance cannot keep you apart. 2 taps to go',
+        1 => 'The Sword Pass, steep and sheer. 1 tap to go',
         _ => '$remaining taps to go',
       };
     }
