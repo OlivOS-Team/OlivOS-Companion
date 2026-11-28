@@ -4,13 +4,25 @@ import 'package:material_ui/material_ui.dart';
 
 import 'olivos_mark.dart';
 
+// Timeline for the default 3100 ms animation:
+// - 0–1680 ms: line drawing
+// - 1680–2680 ms: hold the completed mark
+// - 2680–2932 ms: pulse
+// - 2722–3100 ms: app fade-in
+// - 2890–3100 ms: splash fade-out
+const double _drawEndFraction = 1680 / 3100;
+const double _pulseStartFraction = 2680 / 3100;
+const double _pulseEndFraction = 2932 / 3100;
+const double _appFadeStartFraction = 2722 / 3100;
+const double _splashFadeStartFraction = 2890 / 3100;
+
 /// Plays the OlivOS mark construction animation before revealing [child].
 class LaunchGate extends StatefulWidget {
   const LaunchGate({
     super.key,
     required this.child,
     this.lines = olivosMarkLines,
-    this.duration = const Duration(milliseconds: 2100),
+    this.duration = const Duration(milliseconds: 3100),
   });
 
   final Widget child;
@@ -38,12 +50,20 @@ class _LaunchGateState extends State<LaunchGate>
     _controller = AnimationController(vsync: this, duration: widget.duration);
     _appOpacity = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.82, 1, curve: Curves.easeOutCubic),
+      curve: const Interval(
+        _appFadeStartFraction,
+        1,
+        curve: Curves.easeOutCubic,
+      ),
     );
     _splashOpacity = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.9, 1, curve: Curves.easeInCubic),
+        curve: const Interval(
+          _splashFadeStartFraction,
+          1,
+          curve: Curves.easeInCubic,
+        ),
       ),
     );
     _controller.addStatusListener((status) {
@@ -128,7 +148,7 @@ class _OlivOSMarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final value = animation.value.clamp(0.0, 1.0);
-    final drawProgress = (value / 0.8).clamp(0.0, 1.0);
+    final drawProgress = (value / _drawEndFraction).clamp(0.0, 1.0);
     final scale = _scaleAt(value);
     final aspect = olivosMarkBounds.width / olivosMarkBounds.height;
     final targetWidth = math.min(
@@ -180,8 +200,11 @@ class _OlivOSMarkPainter extends CustomPainter {
   }
 
   double _scaleAt(double value) {
-    if (value < 0.8 || value > 0.92) return 1;
-    final progress = ((value - 0.8) / 0.12).clamp(0.0, 1.0);
+    if (value < _pulseStartFraction || value > _pulseEndFraction) return 1;
+    final progress =
+        ((value - _pulseStartFraction) /
+                (_pulseEndFraction - _pulseStartFraction))
+            .clamp(0.0, 1.0);
     return 1 + 0.035 * math.sin(math.pi * progress);
   }
 

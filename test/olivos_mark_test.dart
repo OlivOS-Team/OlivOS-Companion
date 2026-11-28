@@ -17,17 +17,20 @@ void main() {
     expect(lines[3]!.reverse, isTrue);
     expect(lines[4]!.reverse, isFalse);
 
-    // 5-9 start after 3, without waiting for the longer line 1.
+    // 5-8 start together after 3; 9 follows immediately after 8.
     expect(
       lines[5]!.start,
       greaterThanOrEqualTo(lines[3]!.start + lines[3]!.duration),
     );
     expect(lines[5]!.start, lessThan(lines[1]!.start + lines[1]!.duration));
     expect(lines[5]!.start, 0.34);
-    expect(lines[6]!.start, 0.44);
-    expect(lines[7]!.start, 0.54);
-    expect(lines[8]!.start, 0.64);
-    expect(lines[9]!.start, 0.74);
+    expect(lines[6]!.start, 0.34);
+    expect(lines[7]!.start, 0.34);
+    expect(lines[8]!.start, 0.34);
+    expect(
+      lines[9]!.start,
+      closeTo(lines[8]!.start + lines[8]!.duration, 1e-9),
+    );
     expect(lines[5]!.reverse, isTrue);
     expect(lines[6]!.reverse, isFalse);
     expect(lines[7]!.reverse, isFalse);

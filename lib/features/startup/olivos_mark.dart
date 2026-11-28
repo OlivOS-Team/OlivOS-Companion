@@ -65,7 +65,8 @@ class OlivOSMarkLine {
 /// simultaneously. Duplicate [id]s are drawn once.
 const List<OlivOSMarkLine> olivosMarkLines = [
   // First group: 2 and 4. Once 4 finishes, 1 and 3 start together; 2 can still
-  // be finishing. After 3 finishes, 5-9 continue even while 1 is still drawing.
+  // be finishing. After 3 finishes, 5-8 start together; 9 follows as soon as 8
+  // completes.
   // 1: lower-left long diagonal. Draw from upper-right toward lower-left.
   // The two source segments are merged into one polygon; the bottom cap still
   // gets the off-screen extension.
@@ -158,7 +159,7 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 6: upper-left diagonal. Draw from upper-right toward lower-left.
   OlivOSMarkLine(
     id: 6,
-    start: 0.44,
+    start: 0.34,
     duration: 0.09,
     polygons: [
       [
@@ -172,7 +173,7 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 7: lower-left diagonal. Draw from upper-left toward lower-right.
   OlivOSMarkLine(
     id: 7,
-    start: 0.54,
+    start: 0.34,
     duration: 0.09,
     polygons: [
       [
@@ -186,7 +187,7 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 8: bottom bar. Draw from left toward right.
   OlivOSMarkLine(
     id: 8,
-    start: 0.64,
+    start: 0.34,
     duration: 0.09,
     polygons: [
       [
@@ -200,7 +201,7 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 9: right horizontal bar. Draw from left toward right.
   OlivOSMarkLine(
     id: 9,
-    start: 0.74,
+    start: 0.43,
     duration: 0.09,
     extendEnd: true,
     polygons: [
