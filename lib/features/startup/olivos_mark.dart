@@ -65,14 +65,14 @@ class OlivOSMarkLine {
 /// simultaneously. Duplicate [id]s are drawn once.
 const List<OlivOSMarkLine> olivosMarkLines = [
   // First group: 2 and 4. Once 4 finishes, 1 and 3 start together; 2 can still
-  // be finishing. After 3 finishes, 5-8 start together; 9 follows as soon as 8
-  // completes.
+  // be finishing. After 3 finishes, 5-8 start in order with a 0.02 stagger;
+  // 9 follows as soon as 8 completes.
   // 1: lower-left long diagonal. Draw from upper-right toward lower-left.
   // The two source segments are merged into one polygon; the bottom cap still
   // gets the off-screen extension.
   OlivOSMarkLine(
     id: 1,
-    start: 0.17,
+    start: 0.21,
     duration: 0.30,
     extendEnd: true,
     polygons: [
@@ -109,8 +109,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 3: upper-right ring side. Draw from lower-right toward upper-left.
   OlivOSMarkLine(
     id: 3,
-    start: 0.17,
-    duration: 0.16,
+    start: 0.21,
+    duration: 0.20,
     reverse: true,
     polygons: [
       [
@@ -127,7 +127,7 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   OlivOSMarkLine(
     id: 4,
     start: 0,
-    duration: 0.16,
+    duration: 0.20,
     extendStart: true,
     polygons: [
       [
@@ -144,8 +144,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 5: top bar. Draw from right toward left.
   OlivOSMarkLine(
     id: 5,
-    start: 0.34,
-    duration: 0.09,
+    start: 0.42,
+    duration: 0.10,
     reverse: true,
     polygons: [
       [
@@ -159,8 +159,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 6: upper-left diagonal. Draw from upper-right toward lower-left.
   OlivOSMarkLine(
     id: 6,
-    start: 0.34,
-    duration: 0.09,
+    start: 0.44,
+    duration: 0.10,
     polygons: [
       [
         Offset(24.4535, 25.5528),
@@ -173,8 +173,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 7: lower-left diagonal. Draw from upper-left toward lower-right.
   OlivOSMarkLine(
     id: 7,
-    start: 0.34,
-    duration: 0.09,
+    start: 0.46,
+    duration: 0.10,
     polygons: [
       [
         Offset(31.1487, 62.6576),
@@ -187,8 +187,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 8: bottom bar. Draw from left toward right.
   OlivOSMarkLine(
     id: 8,
-    start: 0.34,
-    duration: 0.09,
+    start: 0.48,
+    duration: 0.10,
     polygons: [
       [
         Offset(67.7620, 75.1345),
@@ -201,8 +201,8 @@ const List<OlivOSMarkLine> olivosMarkLines = [
   // 9: right horizontal bar. Draw from left toward right.
   OlivOSMarkLine(
     id: 9,
-    start: 0.43,
-    duration: 0.09,
+    start: 0.58,
+    duration: 0.10,
     extendEnd: true,
     polygons: [
       [

@@ -4,17 +4,19 @@ import 'package:material_ui/material_ui.dart';
 
 import 'olivos_mark.dart';
 
-// Timeline for the default 3100 ms animation:
-// - 0–1680 ms: line drawing
-// - 1680–2680 ms: hold the completed mark
-// - 2680–2932 ms: pulse
-// - 2722–3100 ms: app fade-in
-// - 2890–3100 ms: splash fade-out
-const double _drawEndFraction = 1680 / 3100;
-const double _pulseStartFraction = 2680 / 3100;
-const double _pulseEndFraction = 2932 / 3100;
-const double _appFadeStartFraction = 2722 / 3100;
-const double _splashFadeStartFraction = 2890 / 3100;
+// Timeline for the default 1420 ms animation. Line start/duration values are
+// relative; the whole drawing schedule is scaled so its last line ends at
+// 1000 ms, exactly when the pulse begins:
+// - 0–1000 ms: line drawing
+// - 1000–1252 ms: pulse
+// - 1042–1420 ms: app fade-in
+// - 1210–1420 ms: splash fade-out
+const int _totalTimelineMs = 1420;
+const int _lineEndTimelineMs = 1000;
+const double _pulseStartFraction = 1000 / _totalTimelineMs;
+const double _pulseEndFraction = 1252 / _totalTimelineMs;
+const double _appFadeStartFraction = 1042 / _totalTimelineMs;
+const double _splashFadeStartFraction = 1210 / _totalTimelineMs;
 
 /// Plays the OlivOS mark construction animation before revealing [child].
 class LaunchGate extends StatefulWidget {
@@ -22,7 +24,7 @@ class LaunchGate extends StatefulWidget {
     super.key,
     required this.child,
     this.lines = olivosMarkLines,
-    this.duration = const Duration(milliseconds: 3100),
+    this.duration = const Duration(milliseconds: _totalTimelineMs),
   });
 
   final Widget child;
@@ -148,7 +150,16 @@ class _OlivOSMarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final value = animation.value.clamp(0.0, 1.0);
-    final drawProgress = (value / _drawEndFraction).clamp(0.0, 1.0);
+    final lastLineEnd = lines.fold<double>(
+      0,
+      (latest, line) => math.max(latest, line.start + line.duration),
+    );
+    final drawProgress = lastLineEnd <= 0
+        ? 1.0
+        : (value * _totalTimelineMs * lastLineEnd / _lineEndTimelineMs).clamp(
+            0.0,
+            1.0,
+          );
     final scale = _scaleAt(value);
     final aspect = olivosMarkBounds.width / olivosMarkBounds.height;
     final targetWidth = math.min(

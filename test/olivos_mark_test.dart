@@ -9,24 +9,28 @@ void main() {
 
     expect(lines[2]!.start, 0);
     expect(lines[4]!.start, 0);
-    expect(lines[4]!.start + lines[4]!.duration, lessThanOrEqualTo(0.17));
-    expect(lines[1]!.start, 0.17);
-    expect(lines[3]!.start, 0.17);
-    expect(lines[1]!.start + lines[1]!.duration, lessThanOrEqualTo(0.48));
+    expect(lines[4]!.duration, 0.20);
+    expect(lines[4]!.start + lines[4]!.duration, lessThanOrEqualTo(0.21));
+    expect(lines[1]!.start, 0.21);
+    expect(lines[3]!.start, 0.21);
+    expect(lines[3]!.duration, 0.20);
     expect(lines[1]!.reverse, isFalse);
     expect(lines[3]!.reverse, isTrue);
     expect(lines[4]!.reverse, isFalse);
 
-    // 5-8 start together after 3; 9 follows immediately after 8.
+    // 5-8 stagger by 0.02 in numeric order; 9 follows immediately after 8.
     expect(
       lines[5]!.start,
       greaterThanOrEqualTo(lines[3]!.start + lines[3]!.duration),
     );
     expect(lines[5]!.start, lessThan(lines[1]!.start + lines[1]!.duration));
-    expect(lines[5]!.start, 0.34);
-    expect(lines[6]!.start, 0.34);
-    expect(lines[7]!.start, 0.34);
-    expect(lines[8]!.start, 0.34);
+    for (final id in [5, 6, 7, 8, 9]) {
+      expect(lines[id]!.duration, 0.10);
+    }
+    expect(lines[5]!.start, 0.42);
+    expect(lines[6]!.start, 0.44);
+    expect(lines[7]!.start, 0.46);
+    expect(lines[8]!.start, 0.48);
     expect(
       lines[9]!.start,
       closeTo(lines[8]!.start + lines[8]!.duration, 1e-9),
