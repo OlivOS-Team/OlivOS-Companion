@@ -203,63 +203,8 @@ class _EasterEggLogoState extends ConsumerState<_EasterEggLogo> {
 
   void _showBubble(String message) {
     _removeBubble();
-    final colors = Theme.of(context).colorScheme;
-    final style = Theme.of(context).textTheme.bodyMedium
-        ?.copyWith(color: colors.onInverseSurface);
     final entry = OverlayEntry(
-      builder: (context) {
-        return Positioned.fill(
-          child: IgnorePointer(
-            child: SafeArea(
-              minimum: const EdgeInsets.only(bottom: 24),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        return Opacity(
-                          opacity: value,
-                          child: Transform.translate(
-                            offset: Offset(0, 24 * (1 - value)),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Semantics(
-                        liveRegion: true,
-                        container: true,
-                        child: Material(
-                          key: const Key('about-easter-egg-bubble'),
-                          color: colors.inverseSurface,
-                          elevation: 6,
-                          borderRadius: BorderRadius.circular(18),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            child: Text(
-                              message,
-                              style: style,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+      builder: (context) => _EasterEggBubble(message: message),
     );
     Overlay.of(context, rootOverlay: true).insert(entry);
     _bubble = entry;
@@ -326,6 +271,70 @@ class _EasterEggLogoState extends ConsumerState<_EasterEggLogo> {
             width: 40,
             height: 40,
             fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EasterEggBubble extends StatelessWidget {
+  const _EasterEggBubble({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final style = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.onInverseSurface,
+    );
+
+    return Positioned.fill(
+      child: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: IgnorePointer(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, 24 * (1 - value)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Semantics(
+                  liveRegion: true,
+                  container: true,
+                  child: Material(
+                    key: const Key('about-easter-egg-bubble'),
+                    color: colors.inverseSurface,
+                    elevation: 6,
+                    borderRadius: BorderRadius.circular(18),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      child: Text(
+                        message,
+                        style: style,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
