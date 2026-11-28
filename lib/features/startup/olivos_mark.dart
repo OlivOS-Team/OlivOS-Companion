@@ -8,9 +8,9 @@ const Rect olivosMarkBounds = Rect.fromLTRB(16.79, 0, 122.86, 96.3);
 
 /// One visually distinct line of the mark.
 ///
-/// A line can contain multiple source polygons (for example, a long diagonal
-/// stripe is split into two polygons). They are animated together so a line is
-/// only drawn once.
+/// A line can contain multiple source polygons for shapes that were split in
+/// the source vector. The built-in mark uses one merged polygon per line; they
+/// are still animated together so a line is only drawn once.
 class OlivOSMarkLine {
   const OlivOSMarkLine({
     required this.id,
@@ -62,6 +62,8 @@ class OlivOSMarkLine {
 /// simultaneously. Duplicate [id]s are drawn once.
 const List<OlivOSMarkLine> olivosMarkLines = [
   // 1: lower-left long diagonal. Draw from lower-left toward upper-right.
+  // The two source segments are merged into one polygon; the bottom cap still
+  // gets the off-screen extension.
   OlivOSMarkLine(
     id: 1,
     start: 0,
@@ -71,21 +73,17 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     polygons: [
       [
         Offset(96.56, 51.53),
-        Offset(82.17, 76.12),
-        Offset(71.68, 76.28),
         Offset(91.5, 42.38),
-      ],
-      [
-        Offset(82.7, 75.22),
-        Offset(82.18, 76.11),
-        Offset(70.37, 96.3),
-        Offset(59.95, 96.3),
         Offset(71.68, 76.28),
-        Offset(77.64, 66.1),
+        Offset(59.95, 96.3),
+        Offset(70.37, 96.3),
+        Offset(82.18, 76.11),
+        Offset(82.7, 75.22),
       ],
     ],
   ),
   // 2: adjacent lower diagonal. Draw from lower-left toward upper-right.
+  // Like 1, its source segments are merged into one polygon.
   OlivOSMarkLine(
     id: 2,
     start: 0,
@@ -95,17 +93,11 @@ const List<OlivOSMarkLine> olivosMarkLines = [
     polygons: [
       [
         Offset(112.45, 51.48),
-        Offset(98.06, 76.07),
-        Offset(87.56, 76.23),
         Offset(107.39, 42.33),
-      ],
-      [
-        Offset(98.58, 75.18),
-        Offset(98.06, 76.07),
-        Offset(86.23, 96.3),
+        Offset(87.56, 76.23),
         Offset(75.84, 96.3),
-        Offset(87.57, 76.23),
-        Offset(93.54, 66.04),
+        Offset(86.23, 96.3),
+        Offset(98.06, 76.07),
       ],
     ],
   ),

@@ -1,8 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:olivos_companion/features/startup/launch_gate.dart';
+import 'package:olivos_companion/features/startup/olivos_mark.dart';
 
 void main() {
+  test('1、2 号线使用单个多边形并保留末端出屏', () {
+    for (final id in [1, 2]) {
+      final line = olivosMarkLines.firstWhere((line) => line.id == id);
+      expect(line.polygons, hasLength(1));
+      expect(line.extendEnd, isTrue);
+    }
+  });
+
   testWidgets('启动动画结束后进入主界面', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

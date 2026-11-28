@@ -201,8 +201,6 @@ class _LineGeometry {
     this.drawEnd,
     this.normal,
     this.halfWidth,
-    this.screenEntryFrom,
-    this.screenEntryTo,
   );
 
   final int id;
@@ -213,8 +211,6 @@ class _LineGeometry {
   final Offset drawEnd;
   final Offset normal;
   final double halfWidth;
-  final Offset? screenEntryFrom;
-  final Offset? screenEntryTo;
 
   factory _LineGeometry.fromLine(OlivOSMarkLine line, Rect visibleRect) {
     final firstPoint = line.polygons.first.first;
@@ -251,6 +247,7 @@ class _LineGeometry {
     // Overscan generously: the cap must be completely outside the screen, and
     // the line's direction must not change to chase a corner.
     final margin = math.max(12.0, length * 0.3);
+    Offset? endCapEntry;
     if (line.extendEnd) {
       end += _extendCap(
         polygons,
@@ -260,16 +257,21 @@ class _LineGeometry {
         length,
         margin,
       );
+      if (line.reverse) {
+        endCapEntry = _capAnchor(polygons, start, direction, length);
+      }
     }
     if (line.extendStart) {
       final reverse = -direction;
       start += _extendCap(polygons, end, reverse, visibleRect, length, margin);
     }
 
-    // Start reverse lines at the visible end so the off-screen extension does
-    // not delay the beginning of the animation.
+    // Start reverse extended lines at the actual outer cap. The clip then
+    // includes the off-screen extension while paint() begins the visible cut
+    // at the screen boundary; this keeps the lower end connected during the
+    // whole animation instead of only at the final frame.
     final drawStart = line.reverse
-        ? axisEnd
+        ? (line.extendEnd ? (endCapEntry ?? end) : axisEnd)
         : (line.extendEnd ? axisStart : start);
     final drawEnd = line.reverse ? (line.extendStart ? start : axisStart) : end;
     final drawAxis = drawEnd - drawStart;
@@ -286,11 +288,6 @@ class _LineGeometry {
       }
     }
 
-    // For reverse lines that extend past the lower-left edge, reveal them from
-    // the screen boundary so the off-screen extension and the animated shaft
-    // stay connected.
-    final extendReverse = line.reverse && line.extendEnd;
-
     return _LineGeometry._(
       line.id,
       line.start,
@@ -300,8 +297,6 @@ class _LineGeometry {
       drawEnd,
       normal,
       halfWidth + 0.6,
-      extendReverse ? _outsidePoint(end, direction, visibleRect, margin) : null,
-      extendReverse ? axisStart : null,
     );
   }
 
@@ -328,6 +323,22 @@ class _LineGeometry {
       polygons[projection.polygonIndex][projection.pointIndex] += delta;
     }
     return delta;
+  }
+
+  /// Returns the cap point farthest along [direction].
+  static Offset? _capAnchor(
+    List<List<Offset>> polygons,
+    Offset fixed,
+    Offset direction,
+    double length,
+  ) {
+    final cap = _capPoints(polygons, fixed, direction, length);
+    if (cap.isEmpty) return null;
+    var anchor = cap.first;
+    for (final candidate in cap.skip(1)) {
+      if (candidate.projection > anchor.projection) anchor = candidate;
+    }
+    return polygons[anchor.polygonIndex][anchor.pointIndex];
   }
 
   /// Translation distance that puts the whole cap past one screen edge.
@@ -404,13 +415,10 @@ class _LineGeometry {
       return;
     }
 
-    var paintStart = drawStart;
-    if (screenEntryFrom != null && screenEntryTo != null) {
-      paintStart =
-          _entryPoint(screenEntryFrom!, screenEntryTo!, visibleRect) ??
-          drawStart;
-    }
-    final cut = Offset.lerp(paintStart, drawEnd, progress)!;
+    final paintStart = drawStart;
+    final cutStart =
+        _entryPoint(paintStart, drawEnd, visibleRect) ?? paintStart;
+    final cut = Offset.lerp(cutStart, drawEnd, progress)!;
     final clip = Path()
       ..addPolygon([
         paintStart + normal * halfWidth,
@@ -425,26 +433,6 @@ class _LineGeometry {
       canvas.drawPath(path, _OlivOSMarkPainter._paint);
     }
     canvas.restore();
-  }
-
-  /// Moves [origin] past [rect] along [direction], with overscan.
-  ///
-  /// The extended cap can be outside while the axis endpoint is still inside;
-  /// using the axis endpoint for the screen-entry reveal would then leave the
-  /// extension disconnected until the animation finishes. This returns a point
-  /// that is definitely outside the screen.
-  static Offset _outsidePoint(
-    Offset origin,
-    Offset direction,
-    Rect rect,
-    double margin,
-  ) {
-    if (!rect.contains(origin)) return origin;
-    final interval = _clipToRect(origin, direction, rect);
-    if (interval == null || !interval.exit.isFinite) {
-      return origin + direction * margin;
-    }
-    return origin + direction * (interval.exit + margin);
   }
 
   static Offset? _entryPoint(Offset from, Offset to, Rect rect) {
