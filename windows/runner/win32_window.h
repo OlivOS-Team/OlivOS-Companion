@@ -56,6 +56,9 @@ class Win32Window {
   // Overrides the system theme used for the native title bar.
   void SetThemeOverride(std::optional<bool> dark_mode);
 
+  // Tints the native title bar to match the launch splash while it is visible.
+  void SetLaunchSplashActive(bool active);
+
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
 
@@ -95,6 +98,8 @@ class Win32Window {
   void UpdateTheme(HWND const window);
 
   std::optional<bool> theme_override_;
+
+  bool launch_splash_active_ = false;
 
   bool quit_on_close_ = false;
 

@@ -298,6 +298,13 @@ void Win32Window::SetThemeOverride(std::optional<bool> dark_mode) {
   }
 }
 
+void Win32Window::SetLaunchSplashActive(bool active) {
+  launch_splash_active_ = active;
+  if (window_handle_ != nullptr) {
+    UpdateTheme(window_handle_);
+  }
+}
+
 bool Win32Window::OnCreate() {
   // No-op; provided for subclasses.
   return true;
@@ -308,6 +315,21 @@ void Win32Window::OnDestroy() {
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
+  if (launch_splash_active_) {
+    BOOL dark_mode = TRUE;
+    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark_mode,
+                          sizeof(dark_mode));
+    COLORREF caption_color = RGB(0x00, 0xA0, 0xEA);
+    COLORREF text_color = RGB(0xFF, 0xFF, 0xFF);
+    DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption_color,
+                          sizeof(caption_color));
+    DwmSetWindowAttribute(window, DWMWA_TEXT_COLOR, &text_color,
+                          sizeof(text_color));
+    DwmSetWindowAttribute(window, DWMWA_BORDER_COLOR, &caption_color,
+                          sizeof(caption_color));
+    return;
+  }
+
   bool enable_dark_mode = false;
   if (theme_override_.has_value()) {
     enable_dark_mode = theme_override_.value();

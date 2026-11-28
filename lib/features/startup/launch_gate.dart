@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/window_theme_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'olivos_mark.dart';
 
@@ -51,6 +53,7 @@ class _LaunchGateState extends State<LaunchGate>
   bool _started = false;
   bool _finished = false;
   bool _finishNotified = false;
+  bool _splashTitleBarActive = false;
 
   @override
   void initState() {
@@ -76,10 +79,18 @@ class _LaunchGateState extends State<LaunchGate>
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
+        _setSplashTitleBar(false);
         setState(() => _finished = true);
         _notifyFinished();
       }
     });
+  }
+
+  /// Keeps the native title bar matched to the splash background while visible.
+  void _setSplashTitleBar(bool active) {
+    if (_splashTitleBarActive == active) return;
+    _splashTitleBarActive = active;
+    unawaited(WindowThemeService.setLaunchSplashActive(active));
   }
 
   void _notifyFinished() {
@@ -100,12 +111,14 @@ class _LaunchGateState extends State<LaunchGate>
       _finished = true;
       _notifyFinished();
     } else {
+      _setSplashTitleBar(true);
       _controller.forward();
     }
   }
 
   @override
   void dispose() {
+    _setSplashTitleBar(false);
     _controller.dispose();
     super.dispose();
   }

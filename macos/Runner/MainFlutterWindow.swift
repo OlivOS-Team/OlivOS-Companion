@@ -3,6 +3,8 @@ import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
   private var windowChannel: FlutterMethodChannel?
+  private var titleBarDark = false
+  private var launchSplashActive = false
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -31,7 +33,22 @@ class MainFlutterWindow: NSWindow {
           )
           return
         }
-        self?.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        self?.titleBarDark = dark
+        self?.applyTitleBarStyle()
+        result(nil)
+      case "setLaunchSplashActive":
+        guard let active = call.arguments as? Bool else {
+          result(
+            FlutterError(
+              code: "invalid_arguments",
+              message: "Expected a boolean",
+              details: nil
+            )
+          )
+          return
+        }
+        self?.launchSplashActive = active
+        self?.applyTitleBarStyle()
         result(nil)
       case "getRefreshRate":
         guard let screen = self?.screen ?? NSScreen.main else {
@@ -65,5 +82,25 @@ class MainFlutterWindow: NSWindow {
       title += " v\(version)"
     }
     self.title = title
+  }
+
+  private func applyTitleBarStyle() {
+    if launchSplashActive {
+      appearance = NSAppearance(named: .darkAqua)
+      backgroundColor = NSColor(
+        srgbRed: 0.0,
+        green: 160.0 / 255.0,
+        blue: 234.0 / 255.0,
+        alpha: 1.0
+      )
+      titlebarAppearsTransparent = true
+      titlebarSeparatorStyle = .none
+      return
+    }
+
+    appearance = NSAppearance(named: titleBarDark ? .darkAqua : .aqua)
+    backgroundColor = .windowBackgroundColor
+    titlebarAppearsTransparent = false
+    titlebarSeparatorStyle = .automatic
   }
 }

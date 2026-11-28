@@ -55,6 +55,16 @@ bool FlutterWindow::OnCreate() {
           result->Success();
           return;
         }
+        if (call.method_name() == "setLaunchSplashActive") {
+          const auto* active = std::get_if<bool>(call.arguments());
+          if (active == nullptr) {
+            result->Error("invalid_arguments", "Expected a boolean");
+            return;
+          }
+          SetLaunchSplashActive(*active);
+          result->Success();
+          return;
+        }
         if (call.method_name() == "getRefreshRate") {
           HMONITOR monitor =
               MonitorFromWindow(GetHandle(), MONITOR_DEFAULTTONEAREST);

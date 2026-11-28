@@ -28,4 +28,13 @@ class WindowThemeService {
       // The window may be unavailable during shutdown.
     }
   }
+
+  static Future<void> setLaunchSplashActive(bool active) async {
+    if (!Platform.isWindows && !Platform.isMacOS) return;
+    try {
+      await _channel.invokeMethod<void>('setLaunchSplashActive', active);
+    } catch (_) {
+      // The window may be unavailable during shutdown.
+    }
+  }
 }
