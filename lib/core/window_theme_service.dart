@@ -8,9 +8,10 @@ class WindowThemeService {
   static bool? _lastDark;
 
   static Future<int?> refreshRate() async {
-    if (!Platform.isWindows) return null;
     try {
-      return await _channel.invokeMethod<int>('getRefreshRate');
+      final hz = await _channel.invokeMethod<int>('getRefreshRate');
+      if (hz == null || hz <= 1) return null;
+      return hz;
     } catch (_) {
       return null;
     }

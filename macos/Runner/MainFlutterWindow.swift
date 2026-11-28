@@ -19,22 +19,35 @@ class MainFlutterWindow: NSWindow {
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     channel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "setTitleBarTheme" else {
-        result(FlutterMethodNotImplemented)
-        return
-      }
-      guard let dark = call.arguments as? Bool else {
-        result(
-          FlutterError(
-            code: "invalid_arguments",
-            message: "Expected a boolean",
-            details: nil
+      switch call.method {
+      case "setTitleBarTheme":
+        guard let dark = call.arguments as? Bool else {
+          result(
+            FlutterError(
+              code: "invalid_arguments",
+              message: "Expected a boolean",
+              details: nil
+            )
           )
-        )
-        return
+          return
+        }
+        self?.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        result(nil)
+      case "getRefreshRate":
+        guard let screen = self?.screen ?? NSScreen.main else {
+          result(
+            FlutterError(
+              code: "unavailable",
+              message: "Could not find active screen",
+              details: nil
+            )
+          )
+          return
+        }
+        result(screen.maximumFramesPerSecond)
+      default:
+        result(FlutterMethodNotImplemented)
       }
-      self?.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-      result(nil)
     }
     windowChannel = channel
 
